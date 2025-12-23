@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/liam/screaming-toller/backend/internal/auth"
 	"github.com/liam/screaming-toller/backend/internal/database"
 	"github.com/liam/screaming-toller/backend/internal/models"
@@ -90,4 +91,20 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Token: token,
 		User:  user,
 	})
+}
+
+func GetMe(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(uuid.UUID)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var user models.User
+	if result := database.DB.First(&user, userID); result.Error != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	json.NewEncoder(w).Encode(user)
 }

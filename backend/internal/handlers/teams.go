@@ -8,35 +8,76 @@ import (
 	"github.com/google/uuid"
 	"github.com/liam/screaming-toller/backend/internal/database"
 	"github.com/liam/screaming-toller/backend/internal/models"
+	"gorm.io/gorm"
 )
 
 func CreateTeam(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(uuid.UUID)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	var team models.Team
 	if err := json.NewDecoder(r.Body).Decode(&team); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if result := database.DB.Create(&team); result.Error != nil {
-		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&team).Error; err != nil {
+			return err
+		}
+
+		membership := models.TeamMember{
+			TeamID:   team.ID,
+			UserID:   userID,
+			Role:     "admin",
+			IsActive: true,
+		}
+		if err := tx.Create(&membership).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(team)
 }
 
 func GetTeams(w http.ResponseWriter, r *http.Request) {
-	var teams []models.Team
-	if result := database.DB.Find(&teams); result.Error != nil {
-		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+	userID, ok := r.Context().Value("userID").(uuid.UUID)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
+	}
+
+	var teams []models.Team
+	err := database.DB.Table("teams").
+		Joins("JOIN team_members ON team_members.team_id = teams.id").
+		Where("team_members.user_id = ? AND team_members.is_active = ?", userID, true).
+		Find(&teams).Error
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if teams == nil {
+		teams = []models.Team{}
 	}
 
 	json.NewEncoder(w).Encode(teams)
 }
 
 func GetTeam(w http.ResponseWriter, r *http.Request) {
-	teamIDStr := chi.URLParam(r, "id")
+	teamIDStr := chi.URLParam(r, "teamID")
 	teamID, err := uuid.Parse(teamIDStr)
 	if err != nil {
 		http.Error(w, "Invalid team ID", http.StatusBadRequest)

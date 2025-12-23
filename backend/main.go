@@ -42,9 +42,15 @@ func main() {
 	// Protected Routes
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware)
+		r.Get("/api/auth/me", handlers.GetMe)
 		r.Post("/api/teams", handlers.CreateTeam)
 		r.Get("/api/teams", handlers.GetTeams)
-		r.Get("/api/teams/{id}", handlers.GetTeam)
+
+		// Team-scoped routes
+		r.Route("/api/teams/{teamID}", func(r chi.Router) {
+			r.Use(middleware.RequireTeamMembership)
+			r.Get("/", handlers.GetTeam)
+		})
 	})
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {

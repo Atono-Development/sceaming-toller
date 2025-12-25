@@ -41,7 +41,11 @@ export function GamesPage() {
                 vs {game.opposingTeam}
               </CardTitle>
               <div className="text-sm font-medium text-muted-foreground">
-                {format(new Date(game.date), 'MMM d, yyyy')} • {game.time}
+                {(() => {
+                  const d = new Date(game.date);
+                  const localDate = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+                  return format(localDate, 'MMM d, yyyy');
+                })()} • {game.time}
               </div>
             </CardHeader>
             <CardContent>

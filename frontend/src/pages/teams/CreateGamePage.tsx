@@ -15,6 +15,7 @@ import {
   FormMessage,
 } from '../../components/ui/form'
 import { Input } from '../../components/ui/input'
+import { TimePicker } from '../../components/ui/time-picker'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 
 const formSchema = z.object({
@@ -45,7 +46,7 @@ export function CreateGamePage() {
     try {
       await createGame(currentTeam.id, values)
       navigate(`/teams/${currentTeam.id}/games`)
-    } catch (err) {
+    } catch {
       setError('Failed to create game')
     }
   }
@@ -79,7 +80,10 @@ export function CreateGamePage() {
                   <FormItem>
                     <FormLabel>Time</FormLabel>
                     <FormControl>
-                      <Input type="time" {...field} />
+                      <TimePicker 
+                        value={field.value} 
+                        onChange={field.onChange} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

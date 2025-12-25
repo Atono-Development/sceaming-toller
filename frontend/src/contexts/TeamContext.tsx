@@ -9,6 +9,9 @@ export interface Team {
   league: string;
   season: string;
   isActive: boolean;
+  membership?: {
+    role: string;
+  };
 }
 
 interface TeamContextType {
@@ -87,7 +90,7 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useTeams = () => {
+export const useTeamContext = () => {
   const context = useContext(TeamContext);
   if (context === undefined) {
     throw new Error("useTeams must be used within a TeamProvider");

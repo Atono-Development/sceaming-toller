@@ -50,6 +50,13 @@ func main() {
 		r.Route("/api/teams/{teamID}", func(r chi.Router) {
 			r.Use(middleware.RequireTeamMembership)
 			r.Get("/", handlers.GetTeam)
+			r.Get("/games", handlers.GetTeamGames)
+			r.Get("/games/{gameID}", handlers.GetGame)
+
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.RequireTeamAdmin)
+				r.Post("/games", handlers.CreateGame)
+			})
 		})
 	})
 

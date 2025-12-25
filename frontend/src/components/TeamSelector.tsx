@@ -1,8 +1,8 @@
 import React from 'react';
-import { useTeams } from '../contexts/TeamContext';
+import { useTeamContext } from '../contexts/TeamContext';
 
 export const TeamSelector: React.FC = () => {
-  const { teams, currentTeam, setCurrentTeam, isLoading } = useTeams();
+  const { teams, currentTeam, setCurrentTeam, isLoading } = useTeamContext();
 
   if (isLoading) {
     return (

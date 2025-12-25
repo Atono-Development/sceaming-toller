@@ -5,6 +5,8 @@ import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import Dashboard from './pages/Dashboard'
 import { CreateTeamPage } from './pages/teams/CreateTeamPage'
+import { GamesPage } from './pages/teams/GamesPage'
+import { CreateGamePage } from './pages/teams/CreateGamePage'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth()
@@ -41,6 +43,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <CreateTeamPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teams/:teamId/games"
+              element={
+                <ProtectedRoute>
+                  <GamesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teams/:teamId/games/new"
+              element={
+                <ProtectedRoute>
+                  <CreateGamePage />
                 </ProtectedRoute>
               }
             />

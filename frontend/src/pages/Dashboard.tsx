@@ -1,13 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { useTeams } from "../contexts/TeamContext";
+import { useTeamContext } from "../contexts/TeamContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TeamSelector } from "@/components/TeamSelector";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
-  const { currentTeam } = useTeams();
+  const { currentTeam } = useTeamContext();
   const navigate = useNavigate();
 
   return (
@@ -19,6 +19,11 @@ export default function Dashboard() {
             <p className="text-slate-600">Managing your softball teams</p>
           </div>
           <div className="flex items-center space-x-4">
+            {currentTeam && (
+              <Button variant="ghost" onClick={() => navigate(`/teams/${currentTeam.id}/games`)}>
+                Schedule
+              </Button>
+            )}
             <TeamSelector />
             <Button variant="outline" onClick={logout}>
               Logout

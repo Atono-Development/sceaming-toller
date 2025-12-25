@@ -21,4 +21,15 @@ api.interceptors.request.use(
   }
 );
 
+// Game API
+export const createGame = async (teamId: string, gameData: any) => {
+  const response = await api.post(`/teams/${teamId}/games`, gameData);
+  return response.data;
+};
+
+export const getTeamGames = async (teamId: string) => {
+  const response = await api.get(`/teams/${teamId}/games`);
+  return response.data;
+};
+
 export default api;

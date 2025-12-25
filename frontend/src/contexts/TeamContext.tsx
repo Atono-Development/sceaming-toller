@@ -20,6 +20,7 @@ interface TeamContextType {
   setCurrentTeam: (team: Team | null) => void;
   isLoading: boolean;
   refreshTeams: () => Promise<void>;
+  isAdmin: boolean;
 }
 
 const TeamContext = createContext<TeamContextType | undefined>(undefined);
@@ -83,6 +84,7 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentTeam,
         isLoading,
         refreshTeams: fetchTeams,
+        isAdmin: currentTeam?.membership?.role === "admin",
       }}
     >
       {children}

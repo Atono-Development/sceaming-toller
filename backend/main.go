@@ -46,16 +46,25 @@ func main() {
 		r.Post("/api/teams", handlers.CreateTeam)
 		r.Get("/api/teams", handlers.GetTeams)
 
+		// Invitations
+		r.Get("/api/invitations/{token}", handlers.GetInvitation)
+		r.Post("/api/invitations/{token}/accept", handlers.AcceptInvitation)
+
 		// Team-scoped routes
 		r.Route("/api/teams/{teamID}", func(r chi.Router) {
 			r.Use(middleware.RequireTeamMembership)
 			r.Get("/", handlers.GetTeam)
 			r.Get("/games", handlers.GetTeamGames)
 			r.Get("/games/{gameID}", handlers.GetGame)
+			
+			r.Get("/members", handlers.GetTeamMembers)
 
 			r.Group(func(r chi.Router) {
 				r.Use(middleware.RequireTeamAdmin)
 				r.Post("/games", handlers.CreateGame)
+				
+				r.Post("/invitations", handlers.InviteMember)
+				r.Delete("/members/{memberID}", handlers.RemoveMember)
 			})
 		})
 	})

@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import { CreateTeamPage } from './pages/teams/CreateTeamPage'
 import { GamesPage } from './pages/teams/GamesPage'
 import { CreateGamePage } from './pages/teams/CreateGamePage'
+import Layout from './components/Layout'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth()
@@ -30,38 +31,40 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/teams/create"
-              element={
-                <ProtectedRoute>
-                  <CreateTeamPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/teams/:teamId/games"
-              element={
-                <ProtectedRoute>
-                  <GamesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/teams/:teamId/games/new"
-              element={
-                <ProtectedRoute>
-                  <CreateGamePage />
-                </ProtectedRoute>
-              }
-            />
+            <Route element={<Layout />}>
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teams/create"
+                element={
+                  <ProtectedRoute>
+                    <CreateTeamPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teams/:teamId/games"
+                element={
+                  <ProtectedRoute>
+                    <GamesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teams/:teamId/games/new"
+                element={
+                  <ProtectedRoute>
+                    <CreateGamePage />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </TeamProvider>

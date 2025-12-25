@@ -58,19 +58,24 @@ func GetTeams(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var teams []models.Team
-	err := database.DB.Table("teams").
-		Joins("JOIN team_members ON team_members.team_id = teams.id").
-		Where("team_members.user_id = ? AND team_members.is_active = ?", userID, true).
-		Find(&teams).Error
+	var memberships []models.TeamMember
+	err := database.DB.Preload("Team").
+		Where("user_id = ? AND is_active = ?", userID, true).
+		Find(&memberships).Error
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if teams == nil {
-		teams = []models.Team{}
+	teams := make([]models.Team, 0, len(memberships))
+	for _, m := range memberships {
+		team := m.Team
+		// shallow copy membership to avoid circular ref if necessary, or just assign
+		memberInfo := m
+		memberInfo.Team = models.Team{} // clear self-ref to stay clean
+		team.Membership = &memberInfo
+		teams = append(teams, team)
 	}
 
 	json.NewEncoder(w).Encode(teams)

@@ -32,6 +32,7 @@ type Team struct {
 	IsActive    bool      `gorm:"default:true" json:"isActive"`
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
+	Membership  *TeamMember `gorm:"-" json:"membership,omitempty"`
 }
 
 func (t *Team) BeforeCreate(tx *gorm.DB) (err error) {

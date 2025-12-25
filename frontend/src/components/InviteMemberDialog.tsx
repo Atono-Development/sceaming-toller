@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { useToast } from "./ui/use-toast";
+import { useToast } from "../hooks/use-toast";
 import { useTeamContext } from "../contexts/TeamContext";
 import { Loader2, Copy } from "lucide-react";
 
@@ -37,7 +37,7 @@ export function InviteMemberDialog() {
   const queryClient = useQueryClient();
   const [inviteLink, setInviteLink] = useState<string | null>(null);
 
-  const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<InviteMemberForm>({
+  const { register, handleSubmit, setValue, reset } = useForm<InviteMemberForm>({
     defaultValues: {
       role: "player",
     },

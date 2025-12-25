@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getInvitation, acceptInvitation } from "../api/invitations";
 import { Button } from "../components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../components/ui/card";
-import { useToast } from "../components/ui/use-toast";
+import { useToast } from "../hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
 export function AcceptInvitePage() {
@@ -31,7 +31,7 @@ export function AcceptInvitePage() {
       queryClient.invalidateQueries({ queryKey: ["my-teams"] }); // Refresh teams list
       toast({
         title: "Joined Team",
-        description: `You have successfully joined ${invitation?.data?.team?.name || 'the team'}.`,
+        description: `You have successfully joined ${invitation?.team?.name || 'the team'}.`,
       });
       navigate("/");
     },

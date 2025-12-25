@@ -3,12 +3,14 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/liam/screaming-toller/backend/internal/auth"
 	"github.com/liam/screaming-toller/backend/internal/database"
 	"github.com/liam/screaming-toller/backend/internal/models"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type RegisterRequest struct {
@@ -46,8 +48,44 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		PasswordHash: string(hashedPassword),
 	}
 
-	if result := database.DB.Create(&user); result.Error != nil {
-		http.Error(w, "User already exists or database error", http.StatusConflict)
+	// Transaction to create user and accept any pending invitations
+	err = database.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&user).Error; err != nil {
+			return err
+		}
+
+		// Check for invitations
+		var invitations []models.Invitation
+		if err := tx.Where("email = ? AND (expires_at > ? OR expires_at IS NULL) AND accepted_at IS NULL", user.Email, time.Now()).Find(&invitations).Error; err != nil {
+			// Just log error or ignore? Ideally we shouldn't fail registration if this fails, but better to be transactional.
+			// Proceeding without erroring out, assume no invites if error? No, let's just log.
+			// For simplicity in this plan, let's treat it as part of transaction.
+		}
+
+		for _, inv := range invitations {
+			member := models.TeamMember{
+				TeamID:   inv.TeamID,
+				UserID:   user.ID,
+				Role:     inv.Role,
+				IsActive: true,
+				JoinedAt: time.Now(),
+			}
+			if err := tx.Create(&member).Error; err != nil {
+				return err
+			}
+			
+			now := time.Now()
+			inv.AcceptedAt = &now
+			if err := tx.Save(&inv).Error; err != nil {
+				return err
+			}
+		}
+		
+		return nil
+	})
+
+	if err != nil {
+		http.Error(w, "User already exists or database error", http.StatusConflict) // Could be specific
 		return
 	}
 

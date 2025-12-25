@@ -7,6 +7,8 @@ import Dashboard from './pages/Dashboard'
 import { CreateTeamPage } from './pages/teams/CreateTeamPage'
 import { GamesPage } from './pages/teams/GamesPage'
 import { CreateGamePage } from './pages/teams/CreateGamePage'
+import { RosterPage } from './pages/teams/RosterPage'
+import { AcceptInvitePage } from './pages/AcceptInvitePage'
 import Layout from './components/Layout'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -57,10 +59,26 @@ function App() {
                 }
               />
               <Route
+                path="/teams/:teamId/roster"
+                element={
+                  <ProtectedRoute>
+                    <RosterPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/teams/:teamId/games/new"
                 element={
                   <ProtectedRoute>
                     <CreateGamePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/invitations/:token"
+                element={
+                  <ProtectedRoute>
+                    <AcceptInvitePage />
                   </ProtectedRoute>
                 }
               />

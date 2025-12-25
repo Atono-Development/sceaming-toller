@@ -26,9 +26,14 @@ export default function Layout() {
               )}
               
               {currentTeam && (
-                <Button variant="ghost" onClick={() => navigate(`/teams/${currentTeam.id}/games`)}>
-                  Schedule
-                </Button>
+                <>
+                  <Button variant="ghost" onClick={() => navigate(`/teams/${currentTeam.id}/games`)}>
+                    Schedule
+                  </Button>
+                  <Button variant="ghost" onClick={() => navigate(`/teams/${currentTeam.id}/roster`)}>
+                    Roster
+                  </Button>
+                </>
               )}
               
               <TeamSelector />

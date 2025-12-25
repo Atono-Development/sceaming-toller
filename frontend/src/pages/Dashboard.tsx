@@ -3,33 +3,24 @@ import { useAuth } from "../contexts/AuthContext";
 import { useTeamContext } from "../contexts/TeamContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { TeamSelector } from "@/components/TeamSelector";
+
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { currentTeam } = useTeamContext();
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-slate-50 p-8">
       <div className="max-w-4xl mx-auto space-y-8">
-        <header className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Welcome, {user?.name}</h1>
-            <p className="text-slate-600">Managing your softball teams</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            {currentTeam && (
-              <Button variant="ghost" onClick={() => navigate(`/teams/${currentTeam.id}/games`)}>
-                Schedule
-              </Button>
-            )}
-            <TeamSelector />
-            <Button variant="outline" onClick={logout}>
-              Logout
-            </Button>
-          </div>
-        </header>
+
+        <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold">Welcome, {user?.name}</h1>
+              <p className="text-slate-600">Managing your softball teams</p>
+            </div>
+        </div>
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>

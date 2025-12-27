@@ -113,13 +113,15 @@ export function RosterPage() {
                   <TableCell>{member.user?.email}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {member.role.split(", ").map((role, index) => (
+                      {member.role.split(",").map((role, index) => (
                         <Badge
                           key={index}
-                          variant={role === "Admin" ? "default" : "secondary"}
+                          variant={
+                            role.trim() === "Admin" ? "default" : "secondary"
+                          }
                           className="text-xs capitalize"
                         >
-                          {role}
+                          {role.trim()}
                         </Badge>
                       ))}
                     </div>

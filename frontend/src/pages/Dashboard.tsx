@@ -11,6 +11,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  getMyPreferences,
+  getMyTeamMemberInfo,
+  type TeamMemberPreference,
+} from "../api/members";
 
 interface Game {
   id: string;
@@ -26,6 +31,9 @@ export default function Dashboard() {
   const { currentTeam } = useTeamContext();
   const navigate = useNavigate();
   const [upcomingGames, setUpcomingGames] = useState<Game[]>([]);
+  const [preferences, setPreferences] = useState<TeamMemberPreference[]>([]);
+  const [isPitcher, setIsPitcher] = useState(false);
+  const [loadingPreferences, setLoadingPreferences] = useState(false);
 
   useEffect(() => {
     if (currentTeam?.id) {
@@ -60,6 +68,24 @@ export default function Dashboard() {
           setUpcomingGames(filtered);
         })
         .catch((err: unknown) => console.error("Failed to fetch games:", err));
+    }
+  }, [currentTeam]);
+
+  useEffect(() => {
+    if (currentTeam?.id) {
+      setLoadingPreferences(true);
+      Promise.all([
+        getMyPreferences(currentTeam.id),
+        getMyTeamMemberInfo(currentTeam.id),
+      ])
+        .then(([preferencesData, memberInfo]) => {
+          setPreferences(preferencesData);
+          setIsPitcher(memberInfo.role.includes("pitcher"));
+        })
+        .catch((err: unknown) =>
+          console.error("Failed to fetch preferences:", err)
+        )
+        .finally(() => setLoadingPreferences(false));
     }
   }, [currentTeam]);
 
@@ -111,17 +137,61 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle>My Profile</CardTitle>
               <CardDescription>
-                Manage your position preferences
+                {loadingPreferences
+                  ? "Loading preferences..."
+                  : preferences.length > 0 || isPitcher
+                  ? "Your position preferences"
+                  : "Manage your position preferences"}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {currentTeam ? (
-                <Button
-                  className="w-full"
-                  onClick={() => navigate(`/teams/${currentTeam.id}/profile`)}
-                >
-                  Update Preferences
-                </Button>
+              {loadingPreferences ? (
+                <div className="text-slate-500 italic">
+                  Loading preferences...
+                </div>
+              ) : currentTeam ? (
+                preferences.length > 0 || isPitcher ? (
+                  <div className="space-y-3">
+                    {isPitcher && (
+                      <div className="flex items-center space-x-2">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm font-medium">
+                          Pitcher
+                        </span>
+                      </div>
+                    )}
+                    {preferences.length > 0 && (
+                      <div className="flex items-center space-x-2">
+                        {preferences
+                          .sort((a, b) => a.preferenceRank - b.preferenceRank)
+                          .map((pref) => (
+                            <span
+                              key={pref.preferenceRank}
+                              className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm font-medium"
+                            >
+                              {pref.position}
+                            </span>
+                          ))}
+                      </div>
+                    )}
+                    <Button
+                      className="mt-3 w-full"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        navigate(`/teams/${currentTeam.id}/profile`)
+                      }
+                    >
+                      Edit Preferences
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    className="w-full"
+                    onClick={() => navigate(`/teams/${currentTeam.id}/profile`)}
+                  >
+                    Set Preferences
+                  </Button>
+                )
               ) : (
                 <p className="text-slate-500 italic">
                   Select a team to manage preferences.

@@ -1,6 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTeamContext } from "../../contexts/TeamContext";
-import { getTeamMembers, removeMember } from "../../api/members";
+import {
+  getTeamMembers,
+  removeMember,
+  getAllTeamMemberPreferences,
+} from "../../api/members";
 import { InviteMemberDialog } from "../../components/InviteMemberDialog";
 import {
   Table,
@@ -11,6 +15,7 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
 import { Trash2 } from "lucide-react";
 import { useToast } from "../../hooks/use-toast";
 import { format } from "date-fns";
@@ -29,13 +34,24 @@ export function RosterPage() {
     enabled: !!currentTeam,
   });
 
+  const { data: memberPreferences, isLoading: preferencesLoading } = useQuery({
+    queryKey: ["teamMemberPreferences", currentTeam?.id],
+    queryFn: () => {
+      if (!currentTeam) throw new Error("No team selected");
+      return getAllTeamMemberPreferences(currentTeam.id);
+    },
+    enabled: !!currentTeam && isAdmin,
+  });
+
   const removeMutation = useMutation({
     mutationFn: (memberId: string) => {
       if (!currentTeam) throw new Error("No team selected");
       return removeMember(currentTeam.id, memberId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["teamMembers", currentTeam?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["teamMembers", currentTeam?.id],
+      });
       toast({
         title: "Member removed",
         description: "The team member has been removed.",
@@ -60,7 +76,7 @@ export function RosterPage() {
     return <div>Select a team to view the roster.</div>;
   }
 
-  if (isLoading) {
+  if (isLoading || (isAdmin && preferencesLoading)) {
     return <div>Loading roster...</div>;
   }
 
@@ -78,32 +94,85 @@ export function RosterPage() {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
+              {isAdmin && <TableHead>Position Preferences</TableHead>}
               <TableHead>Joined</TableHead>
               {isAdmin && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {members?.map((member) => (
-              <TableRow key={member.id}>
-                <TableCell className="font-medium">{member.user?.name}</TableCell>
-                <TableCell>{member.user?.email}</TableCell>
-                <TableCell className="capitalize">{member.role}</TableCell>
-                <TableCell>{format(new Date(member.joinedAt), "MMM d, yyyy")}</TableCell>
-                {isAdmin && (
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleRemove(member.id)}
-                      disabled={member.role === "admin"} // Prevent removing self/admins for now? Or just self.
-                      title={member.role === "admin" ? "Cannot remove admin" : "Remove member"}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+            {members?.map((member) => {
+              const preferences = memberPreferences?.find(
+                (p) => p.id === member.id
+              );
+              const isPitcher =
+                preferences?.preferences.some(
+                  (p) => p.position === "Pitcher"
+                ) || member.role.includes("pitcher");
+
+              return (
+                <TableRow key={member.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {member.user?.name}
+                      {isPitcher && (
+                        <Badge variant="secondary" className="text-xs">
+                          Pitcher
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
-                )}
-              </TableRow>
-            ))}
+                  <TableCell>{member.user?.email}</TableCell>
+                  <TableCell className="capitalize">{member.role}</TableCell>
+                  {isAdmin && (
+                    <TableCell>
+                      {preferences && preferences.preferences.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {preferences.preferences
+                            .sort((a, b) => a.preferenceRank - b.preferenceRank)
+                            .map((pref) => (
+                              <Badge
+                                key={pref.id}
+                                variant={
+                                  pref.preferenceRank === 1
+                                    ? "default"
+                                    : "outline"
+                                }
+                                className="text-xs"
+                              >
+                                {pref.position} ({pref.preferenceRank})
+                              </Badge>
+                            ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">
+                          No preferences set
+                        </span>
+                      )}
+                    </TableCell>
+                  )}
+                  <TableCell>
+                    {format(new Date(member.joinedAt), "MMM d, yyyy")}
+                  </TableCell>
+                  {isAdmin && (
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemove(member.id)}
+                        disabled={member.role === "admin"}
+                        title={
+                          member.role === "admin"
+                            ? "Cannot remove admin"
+                            : "Remove member"
+                        }
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

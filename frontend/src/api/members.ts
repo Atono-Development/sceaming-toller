@@ -47,3 +47,19 @@ export const updateMyPreferences = async (
   });
   return response.data;
 };
+
+export interface MemberWithPreferences {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  gender: string;
+  preferences: TeamMemberPreference[];
+}
+
+export const getAllTeamMemberPreferences = async (teamId: string) => {
+  const response = await api.get<MemberWithPreferences[]>(
+    `/teams/${teamId}/members/preferences`
+  );
+  return response.data;
+};

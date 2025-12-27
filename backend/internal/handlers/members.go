@@ -19,8 +19,8 @@ func GetTeamMembers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var members []models.TeamMember
-	// Use Preload to get User details (Name, Email)
-	if result := database.DB.Preload("User").Where("team_id = ? AND is_active = ?", teamID, true).Find(&members); result.Error != nil {
+	// Use Preload to get User details (Name, Email) and Preferences
+	if result := database.DB.Preload("User").Preload("Preferences").Where("team_id = ? AND is_active = ?", teamID, true).Find(&members); result.Error != nil {
 		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -145,4 +145,44 @@ func UpdateMyPreferences(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+func GetAllTeamMemberPreferences(w http.ResponseWriter, r *http.Request) {
+	teamIDStr := chi.URLParam(r, "teamID")
+	teamID, err := uuid.Parse(teamIDStr)
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get all team members with their preferences
+	var members []models.TeamMember
+	if result := database.DB.Preload("User").Preload("Preferences").Where("team_id = ? AND is_active = ?", teamID, true).Find(&members); result.Error != nil {
+		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Format response with member info and their preferences
+	type MemberWithPreferences struct {
+		ID           uuid.UUID                   `json:"id"`
+		Name         string                      `json:"name"`
+		Email        string                      `json:"email"`
+		Role         string                      `json:"role"`
+		Gender       string                      `json:"gender"`
+		Preferences []models.TeamMemberPreference `json:"preferences"`
+	}
+
+	var response []MemberWithPreferences
+	for _, member := range members {
+		response = append(response, MemberWithPreferences{
+			ID:           member.ID,
+			Name:         member.User.Name,
+			Email:        member.User.Email,
+			Role:         member.Role,
+			Gender:       member.Gender,
+			Preferences:  member.Preferences,
+		})
+	}
+
+	json.NewEncoder(w).Encode(response)
 }

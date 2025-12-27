@@ -104,25 +104,26 @@ export function RosterPage() {
               const preferences = memberPreferences?.find(
                 (p) => p.id === member.id
               );
-              const isPitcher =
-                preferences?.preferences.some(
-                  (p) => p.position === "Pitcher"
-                ) || member.role.includes("pitcher");
 
               return (
                 <TableRow key={member.id}>
                   <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {member.user?.name}
-                      {isPitcher && (
-                        <Badge variant="secondary" className="text-xs">
-                          Pitcher
-                        </Badge>
-                      )}
-                    </div>
+                    {member.user?.name}
                   </TableCell>
                   <TableCell>{member.user?.email}</TableCell>
-                  <TableCell className="capitalize">{member.role}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {member.role.split(", ").map((role, index) => (
+                        <Badge
+                          key={index}
+                          variant={role === "Admin" ? "default" : "secondary"}
+                          className="text-xs capitalize"
+                        >
+                          {role}
+                        </Badge>
+                      ))}
+                    </div>
+                  </TableCell>
                   {isAdmin && (
                     <TableCell>
                       {preferences && preferences.preferences.length > 0 ? (

@@ -1,29 +1,35 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider, useAuth } from './contexts/AuthContext'
-import { TeamProvider } from './contexts/TeamContext'
-import LoginPage from './pages/auth/LoginPage'
-import RegisterPage from './pages/auth/RegisterPage'
-import Dashboard from './pages/Dashboard'
-import { CreateTeamPage } from './pages/teams/CreateTeamPage'
-import { GamesPage } from './pages/teams/GamesPage'
-import { CreateGamePage } from './pages/teams/CreateGamePage'
-import { RosterPage } from './pages/teams/RosterPage'
-import { AcceptInvitePage } from './pages/AcceptInvitePage'
-import Layout from './components/Layout'
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { TeamProvider } from "./contexts/TeamContext";
+import LoginPage from "./pages/auth/LoginPage";
+import RegisterPage from "./pages/auth/RegisterPage";
+import Dashboard from "./pages/Dashboard";
+import PlayerDashboard from "./pages/PlayerDashboard";
+import { CreateTeamPage } from "./pages/teams/CreateTeamPage";
+import { GamesPage } from "./pages/teams/GamesPage";
+import { CreateGamePage } from "./pages/teams/CreateGamePage";
+import { RosterPage } from "./pages/teams/RosterPage";
+import { AcceptInvitePage } from "./pages/AcceptInvitePage";
+import Layout from "./components/Layout";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div>Loading...</div>
+    return <div>Loading...</div>;
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/login" replace />;
   }
 
-  return children
-}
+  return children;
+};
 
 function App() {
   return (
@@ -67,6 +73,14 @@ function App() {
                 }
               />
               <Route
+                path="/teams/:teamId/profile"
+                element={
+                  <ProtectedRoute>
+                    <PlayerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/teams/:teamId/games/new"
                 element={
                   <ProtectedRoute>
@@ -88,7 +102,7 @@ function App() {
         </TeamProvider>
       </AuthProvider>
     </Router>
-  )
+  );
 }
 
-export default App
+export default App;

@@ -15,29 +15,46 @@ export default function Layout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <Link to="/" className="text-xl font-bold text-indigo-600 hover:text-indigo-500 transition-colors">
+              <Link
+                to="/"
+                className="text-xl font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
+              >
                 Screaming Toller
               </Link>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               {user && (
-                 <span className="text-sm text-slate-500 hidden md:inline-block">Welcome, {user.name}</span>
+                <span className="text-sm text-slate-500 hidden md:inline-block">
+                  Welcome, {user.name}
+                </span>
               )}
-              
+
               {currentTeam && (
                 <>
-                  <Button variant="ghost" onClick={() => navigate(`/teams/${currentTeam.id}/games`)}>
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate(`/teams/${currentTeam.id}/games`)}
+                  >
                     Schedule
                   </Button>
-                  <Button variant="ghost" onClick={() => navigate(`/teams/${currentTeam.id}/roster`)}>
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate(`/teams/${currentTeam.id}/roster`)}
+                  >
                     Roster
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate(`/teams/${currentTeam.id}/profile`)}
+                  >
+                    Profile
                   </Button>
                 </>
               )}
-              
+
               <TeamSelector />
-              
+
               <Button variant="outline" onClick={logout}>
                 Logout
               </Button>

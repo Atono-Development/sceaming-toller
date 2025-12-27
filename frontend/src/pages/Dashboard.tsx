@@ -16,6 +16,7 @@ import {
   getMyTeamMemberInfo,
   type TeamMemberPreference,
 } from "../api/members";
+import { getAttendance, updateAttendance, type Attendance } from "../api/games";
 
 interface Game {
   id: string;
@@ -34,6 +35,8 @@ export default function Dashboard() {
   const [preferences, setPreferences] = useState<TeamMemberPreference[]>([]);
   const [isPitcher, setIsPitcher] = useState(false);
   const [loadingPreferences, setLoadingPreferences] = useState(false);
+  const [attendance, setAttendance] = useState<Attendance | null>(null);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   useEffect(() => {
     if (currentTeam?.id) {
@@ -88,6 +91,43 @@ export default function Dashboard() {
         .finally(() => setLoadingPreferences(false));
     }
   }, [currentTeam]);
+
+  useEffect(() => {
+    if (currentTeam?.id && upcomingGames.length > 0) {
+      const nextGame = upcomingGames[0];
+      setLoadingAttendance(true);
+      getAttendance(currentTeam.id, nextGame.id)
+        .then((attendanceData) => {
+          const myAttendance = attendanceData.find(
+            (a) => a.teamMember?.user?.email === user?.email
+          );
+          setAttendance(myAttendance || null);
+        })
+        .catch((err: unknown) =>
+          console.error("Failed to fetch attendance:", err)
+        )
+        .finally(() => setLoadingAttendance(false));
+    }
+  }, [currentTeam, upcomingGames, user?.email]);
+
+  const handleAttendanceChange = (status: string) => {
+    if (currentTeam?.id && upcomingGames.length > 0) {
+      const nextGame = upcomingGames[0];
+      updateAttendance(currentTeam.id, nextGame.id, status)
+        .then(() => {
+          setAttendance({
+            id: "",
+            teamMemberId: "",
+            gameId: nextGame.id,
+            status,
+            updatedAt: new Date().toISOString(),
+          });
+        })
+        .catch((err: unknown) =>
+          console.error("Failed to update attendance:", err)
+        );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 p-8">
@@ -183,6 +223,72 @@ export default function Dashboard() {
                     >
                       Edit Preferences
                     </Button>
+
+                    {upcomingGames.length > 0 && (
+                      <div className="mt-4 pt-4 border-t">
+                        <div className="text-sm text-slate-600 mb-2">
+                          Next game attendance:
+                        </div>
+                        {loadingAttendance ? (
+                          <div className="text-slate-500 text-sm italic">
+                            Loading...
+                          </div>
+                        ) : (
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              variant={
+                                attendance?.status === "going"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className={`flex-1 ${
+                                attendance?.status === "going"
+                                  ? "bg-green-600 hover:bg-green-700 text-white"
+                                  : ""
+                              }`}
+                              onClick={() => handleAttendanceChange("going")}
+                            >
+                              Going
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant={
+                                attendance?.status === "maybe"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className={`flex-1 ${
+                                attendance?.status === "maybe"
+                                  ? "bg-yellow-500 hover:bg-yellow-600 text-white"
+                                  : ""
+                              }`}
+                              onClick={() => handleAttendanceChange("maybe")}
+                            >
+                              Maybe
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant={
+                                attendance?.status === "not_going"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className={`flex-1 ${
+                                attendance?.status === "not_going"
+                                  ? "bg-red-600 hover:bg-red-700 text-white"
+                                  : ""
+                              }`}
+                              onClick={() =>
+                                handleAttendanceChange("not_going")
+                              }
+                            >
+                              Not Going
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <Button

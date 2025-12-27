@@ -168,14 +168,15 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
           <div key={rank} className="space-y-2">
             <Label htmlFor={`position-${rank}`}>Preference {rank}</Label>
             <Select
-              value={getCurrentPositionForRank(rank)}
+              value={getCurrentPositionForRank(rank) || undefined}
               onValueChange={(value) => handlePositionChange(rank, value)}
             >
               <SelectTrigger>
-                <SelectValue placeholder={`Select position ${rank}`} />
+                <SelectValue
+                  placeholder={`Select position ${rank} (optional)`}
+                />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No preference</SelectItem>
                 {getAvailablePositions(rank).map((position) => (
                   <SelectItem key={position} value={position}>
                     {position}

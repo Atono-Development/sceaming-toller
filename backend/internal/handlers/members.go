@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -185,4 +186,79 @@ func GetAllTeamMemberPreferences(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(response)
+}
+
+func GetMyTeamMemberInfo(w http.ResponseWriter, r *http.Request) {
+	teamIDStr := chi.URLParam(r, "teamID")
+	teamID, err := uuid.Parse(teamIDStr)
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+
+	userID := r.Context().Value("userID").(uuid.UUID)
+
+	// Find the team member for this user and team
+	var teamMember models.TeamMember
+	if result := database.DB.Preload("User").Where("team_id = ? AND user_id = ? AND is_active = ?", teamID, userID, true).First(&teamMember); result.Error != nil {
+		http.Error(w, "Team member not found", http.StatusNotFound)
+		return
+	}
+
+	json.NewEncoder(w).Encode(teamMember)
+}
+
+func UpdateMyPitcherStatus(w http.ResponseWriter, r *http.Request) {
+	teamIDStr := chi.URLParam(r, "teamID")
+	teamID, err := uuid.Parse(teamIDStr)
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+
+	userID := r.Context().Value("userID").(uuid.UUID)
+
+	// Find the team member for this user and team
+	var teamMember models.TeamMember
+	if result := database.DB.Where("team_id = ? AND user_id = ? AND is_active = ?", teamID, userID, true).First(&teamMember); result.Error != nil {
+		http.Error(w, "Team member not found", http.StatusNotFound)
+		return
+	}
+
+	var req struct {
+		IsPitcher bool `json:"isPitcher"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Update the role to include or remove pitcher
+	if req.IsPitcher {
+		if !strings.Contains(strings.ToLower(teamMember.Role), "pitcher") {
+			if teamMember.Role == "" {
+				teamMember.Role = "pitcher"
+			} else {
+				teamMember.Role = teamMember.Role + ",pitcher"
+			}
+		}
+	} else {
+		// Remove pitcher from role
+		roles := strings.Split(teamMember.Role, ",")
+		var newRoles []string
+		for _, role := range roles {
+			if strings.TrimSpace(strings.ToLower(role)) != "pitcher" {
+				newRoles = append(newRoles, strings.TrimSpace(role))
+			}
+		}
+		teamMember.Role = strings.Join(newRoles, ",")
+	}
+
+	if result := database.DB.Save(&teamMember); result.Error != nil {
+		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
 }

@@ -63,3 +63,18 @@ export const getAllTeamMemberPreferences = async (teamId: string) => {
   );
   return response.data;
 };
+
+export const getMyTeamMemberInfo = async (teamId: string) => {
+  const response = await api.get<TeamMember>(`/teams/${teamId}/members/me`);
+  return response.data;
+};
+
+export const updateMyPitcherStatus = async (
+  teamId: string,
+  isPitcher: boolean
+) => {
+  const response = await api.put(`/teams/${teamId}/members/me/pitcher`, {
+    isPitcher,
+  });
+  return response.data;
+};

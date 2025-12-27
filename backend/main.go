@@ -62,6 +62,8 @@ func main() {
 			// Player preference routes
 			r.Get("/members/me/preferences", handlers.GetMyPreferences)
 			r.Put("/members/me/preferences", handlers.UpdateMyPreferences)
+			r.Get("/members/me", handlers.GetMyTeamMemberInfo)
+			r.Put("/members/me/pitcher", handlers.UpdateMyPitcherStatus)
 
 			// Game-specific routes
 			r.Route("/games/{gameID}", func(r chi.Router) {

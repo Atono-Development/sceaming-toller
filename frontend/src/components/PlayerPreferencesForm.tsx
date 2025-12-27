@@ -9,25 +9,17 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Label } from "./ui/label";
+import { Checkbox } from "./ui/checkbox";
 import {
   getMyPreferences,
   updateMyPreferences,
+  getMyTeamMemberInfo,
+  updateMyPitcherStatus,
   type TeamMemberPreference,
 } from "../api/members";
 import { useToast } from "../hooks/use-toast";
 
-const POSITIONS = [
-  "1B",
-  "2B",
-  "3B",
-  "SS",
-  "LF",
-  "CF",
-  "RF",
-  "C",
-  "Rover",
-  "Pitcher",
-];
+const POSITIONS = ["1B", "2B", "3B", "SS", "LF", "CF", "RF", "C", "Rover"];
 
 interface PlayerPreferencesFormProps {
   teamId: string;
@@ -37,6 +29,7 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
   teamId,
 }) => {
   const [preferences, setPreferences] = useState<TeamMemberPreference[]>([]);
+  const [isPitcher, setIsPitcher] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
@@ -47,8 +40,12 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
 
   const loadPreferences = async () => {
     try {
-      const data = await getMyPreferences(teamId);
-      setPreferences(data);
+      const [preferencesData, memberInfo] = await Promise.all([
+        getMyPreferences(teamId),
+        getMyTeamMemberInfo(teamId),
+      ]);
+      setPreferences(preferencesData);
+      setIsPitcher(memberInfo.role.includes("pitcher"));
     } catch (error) {
       toast({
         title: "Error",
@@ -98,12 +95,17 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Save position preferences
       const prefsToSave = preferences.map((p) => ({
         position: p.position,
         preferenceRank: p.preferenceRank,
       }));
 
       await updateMyPreferences(teamId, prefsToSave);
+
+      // Save pitcher status
+      await updateMyPitcherStatus(teamId, isPitcher);
+
       toast({
         title: "Success",
         description: "Preferences saved successfully",
@@ -144,7 +146,22 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
       <CardContent className="space-y-4">
         <div className="text-sm text-muted-foreground mb-4">
           Select up to 3 preferred positions in order of preference (1 = most
-          preferred).
+          preferred). These are for fielding positions only.
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="pitcher"
+              checked={isPitcher}
+              onCheckedChange={(checked: boolean) => setIsPitcher(checked)}
+            />
+            <Label htmlFor="pitcher">I am a pitcher</Label>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Pitchers are included in the batting order but not counted as
+            fielding preferences.
+          </div>
         </div>
 
         {[1, 2, 3].map((rank) => (

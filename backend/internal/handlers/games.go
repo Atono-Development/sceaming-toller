@@ -93,3 +93,119 @@ func GetGame(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(game)
 }
+
+func GetAttendance(w http.ResponseWriter, r *http.Request) {
+	gameID, err := uuid.Parse(chi.URLParam(r, "gameID"))
+	if err != nil {
+		http.Error(w, "Invalid game ID", http.StatusBadRequest)
+		return
+	}
+
+	var attendance []models.Attendance
+	if result := database.DB.Preload("TeamMember.User").Where("game_id = ?", gameID).Find(&attendance); result.Error != nil {
+		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(attendance)
+}
+
+type UpdateAttendanceRequest struct {
+	Status string `json:"status"` // "going", "not_going", "maybe"
+}
+
+func UpdateAttendance(w http.ResponseWriter, r *http.Request) {
+	gameID, err := uuid.Parse(chi.URLParam(r, "gameID"))
+	if err != nil {
+		http.Error(w, "Invalid game ID", http.StatusBadRequest)
+		return
+	}
+
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamID"))
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+
+	userID := r.Context().Value("userID").(uuid.UUID)
+
+	// Find the team member for this user and team
+	var teamMember models.TeamMember
+	if result := database.DB.Where("team_id = ? AND user_id = ? AND is_active = ?", teamID, userID, true).First(&teamMember); result.Error != nil {
+		http.Error(w, "Team member not found", http.StatusNotFound)
+		return
+	}
+
+	var req UpdateAttendanceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate status
+	validStatuses := map[string]bool{"going": true, "not_going": true, "maybe": true}
+	if !validStatuses[req.Status] {
+		http.Error(w, "Invalid status. Must be 'going', 'not_going', or 'maybe'", http.StatusBadRequest)
+		return
+	}
+
+	// Upsert attendance
+	var attendance models.Attendance
+	if result := database.DB.Where("team_member_id = ? AND game_id = ?", teamMember.ID, gameID).First(&attendance); result.Error != nil {
+		// Create new attendance record
+		attendance = models.Attendance{
+			TeamMemberID: teamMember.ID,
+			GameID:       gameID,
+			Status:       req.Status,
+			UpdatedAt:    time.Now(),
+		}
+		if result := database.DB.Create(&attendance); result.Error != nil {
+			http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// Update existing attendance
+		if result := database.DB.Model(&attendance).Updates(map[string]interface{}{
+			"status":     req.Status,
+			"updated_at": time.Now(),
+		}); result.Error != nil {
+			http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+func GetBattingOrder(w http.ResponseWriter, r *http.Request) {
+	gameID, err := uuid.Parse(chi.URLParam(r, "gameID"))
+	if err != nil {
+		http.Error(w, "Invalid game ID", http.StatusBadRequest)
+		return
+	}
+
+	var battingOrder []models.BattingOrder
+	if result := database.DB.Preload("TeamMember.User").Where("game_id = ?", gameID).Order("batting_position").Find(&battingOrder); result.Error != nil {
+		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(battingOrder)
+}
+
+func GetFieldingLineup(w http.ResponseWriter, r *http.Request) {
+	gameID, err := uuid.Parse(chi.URLParam(r, "gameID"))
+	if err != nil {
+		http.Error(w, "Invalid game ID", http.StatusBadRequest)
+		return
+	}
+
+	var fieldingLineup []models.FieldingLineup
+	if result := database.DB.Preload("TeamMember.User").Where("game_id = ?", gameID).Order("inning, position").Find(&fieldingLineup); result.Error != nil {
+		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(fieldingLineup)
+}

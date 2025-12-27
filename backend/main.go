@@ -59,6 +59,18 @@ func main() {
 			
 			r.Get("/members", handlers.GetTeamMembers)
 
+			// Player preference routes
+			r.Get("/members/me/preferences", handlers.GetMyPreferences)
+			r.Put("/members/me/preferences", handlers.UpdateMyPreferences)
+
+			// Game-specific routes
+			r.Route("/games/{gameID}", func(r chi.Router) {
+				r.Get("/attendance", handlers.GetAttendance)
+				r.Put("/attendance", handlers.UpdateAttendance)
+				r.Get("/batting-order", handlers.GetBattingOrder)
+				r.Get("/fielding", handlers.GetFieldingLineup)
+			})
+
 			r.Group(func(r chi.Router) {
 				r.Use(middleware.RequireTeamAdmin)
 				r.Post("/games", handlers.CreateGame)

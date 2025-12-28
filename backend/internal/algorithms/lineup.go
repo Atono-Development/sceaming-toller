@@ -70,7 +70,7 @@ func GenerateBattingOrder(gameID uuid.UUID) ([]models.BattingOrder, error) {
 	}
 
 	// 6. Space out pitchers
-	if len(pitchers) == 2 {
+	if len(pitchers) >= 2 {
 		positions = spacePitchers(positions, pitcherIDs)
 	}
 
@@ -143,7 +143,7 @@ func alternateGenders(primary, secondary []models.TeamMember) []BattingPosition 
 }
 
 func spacePitchers(positions []BattingPosition, pitcherIDs []uuid.UUID) []BattingPosition {
-	if len(pitcherIDs) != 2 {
+	if len(pitcherIDs) < 2 {
 		return positions
 	}
 
@@ -158,22 +158,56 @@ func spacePitchers(positions []BattingPosition, pitcherIDs []uuid.UUID) []Battin
 		}
 	}
 
-	if len(pitcherPositions) != 2 {
+	if len(pitcherPositions) < 2 {
 		return positions
 	}
 
-	// Calculate ideal spacing (roughly 1/3 of the lineup apart)
-	idealSpacing := len(positions) / 3
-	currentSpacing := pitcherPositions[1] - pitcherPositions[0]
+	// Calculate ideal spacing to distribute pitchers evenly throughout the lineup
+	numPitchers := len(pitcherPositions)
+	lineupSize := len(positions)
+	idealSpacing := lineupSize / numPitchers
+	
+	// Ensure minimum spacing of 5, but don't exceed lineup size
+	if idealSpacing < 5 {
+		idealSpacing = 5
+	}
+	if idealSpacing > lineupSize/2 {
+		idealSpacing = lineupSize / 2
+	}
 
-	// If pitchers are too close, try to space them better
-	if currentSpacing < idealSpacing {
-		// Simple approach: move second pitcher to ideal spacing position
-		idealPos := pitcherPositions[0] + idealSpacing
-		if idealPos < len(positions) {
-			// Swap the second pitcher with the player at the ideal position
-			positions[pitcherPositions[1]], positions[idealPos] = positions[idealPos], positions[pitcherPositions[1]]
+	// Sort pitcher positions to process them in order
+	sort.Ints(pitcherPositions)
+
+	// Redistribute pitchers evenly
+	// Start with the first pitcher's current position (or position 0 if none)
+	startPos := 0
+	if len(pitcherPositions) > 0 {
+		startPos = pitcherPositions[0]
+	}
+
+	// Extract all pitchers from their current positions
+	var pitchers []BattingPosition
+	for _, pos := range pitcherPositions {
+		pitchers = append(pitchers, positions[pos])
+	}
+
+	// Remove pitchers from lineup (in reverse order to maintain indices)
+	for i := len(pitcherPositions) - 1; i >= 0; i-- {
+		pos := pitcherPositions[i]
+		positions = append(positions[:pos], positions[pos+1:]...)
+	}
+
+	// Reinsert pitchers at evenly spaced positions
+	for i, pitcher := range pitchers {
+		targetPos := (startPos + i*idealSpacing) % lineupSize
+		
+		// Ensure we don't go beyond current lineup size
+		if targetPos >= len(positions) {
+			targetPos = len(positions)
 		}
+		
+		// Insert pitcher at target position
+		positions = append(positions[:targetPos], append([]BattingPosition{pitcher}, positions[targetPos:]...)...)
 	}
 
 	return positions

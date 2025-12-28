@@ -31,7 +31,7 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
 }) => {
   const [preferences, setPreferences] = useState<TeamMemberPreference[]>([]);
   const [isPitcher, setIsPitcher] = useState(false);
-  const [gender, setGender] = useState<string | undefined>(undefined);
+  const [gender, setGender] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
@@ -48,7 +48,7 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
       ]);
       setPreferences(preferencesData);
       setIsPitcher(memberInfo.role.includes("pitcher"));
-      setGender(memberInfo.gender || undefined);
+      setGender(memberInfo.gender || "");
     } catch (error) {
       toast({
         title: "Error",
@@ -110,7 +110,7 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
       await updateMyPitcherStatus(teamId, isPitcher);
 
       // Save gender
-      if (gender) {
+      if (gender && gender !== "") {
         await updateMyGender(teamId, gender);
       }
 
@@ -139,7 +139,7 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
 
   const getCurrentPositionForRank = (rank: number) => {
     const pref = preferences.find((p) => p.preferenceRank === rank);
-    return pref?.position || "";
+    return pref?.position;
   };
 
   if (loading) {
@@ -161,7 +161,7 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
           <div className="space-y-2">
             <Label htmlFor="gender">Gender</Label>
             <Select
-              value={gender || undefined}
+              value={gender || ""}
               onValueChange={(value) => setGender(value)}
             >
               <SelectTrigger>
@@ -195,7 +195,7 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
           <div key={rank} className="space-y-2">
             <Label htmlFor={`position-${rank}`}>Preference {rank}</Label>
             <Select
-              value={getCurrentPositionForRank(rank) || undefined}
+              value={getCurrentPositionForRank(rank)}
               onValueChange={(value) => handlePositionChange(rank, value)}
             >
               <SelectTrigger>

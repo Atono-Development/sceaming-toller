@@ -165,15 +165,26 @@ func spacePitchers(positions []BattingPosition, pitcherIDs []uuid.UUID) []Battin
 	// Sort pitcher positions to process them in order
 	sort.Ints(pitcherPositions)
 
-	// Handle 2 pitchers with exactly 5 positions apart for 11-player lineup
+	// Handle 2 pitchers with dynamic spacing based on lineup size
 	if len(pitcherPositions) == 2 {
 		lineupSize := len(positions)
 		
-		// For 11-player lineup, place second pitcher exactly 5 positions away from first
+		// Place second pitcher at dynamically calculated distance from first
 		firstPos := pitcherPositions[0]
-		fixedDistance := 5 // Exactly 5 positions apart for 11-player lineup
+		// Calculate dynamic spacing based on lineup size
+		// For optimal distribution in a cyclic order, divide lineup by number of pitchers
+		fixedDistance := lineupSize / 2
+		// Ensure minimum spacing of 3 positions and account for cyclic nature
+		if fixedDistance < 3 {
+			fixedDistance = 3
+		}
+		// For cyclic orders, the maximum effective spacing is lineupSize/2
+		// since positions wrap around (position 1 is adjacent to last position)
+		if fixedDistance > lineupSize/2 {
+			fixedDistance = lineupSize / 2
+		}
 		
-		// Calculate ideal position for second pitcher: (firstPos + 5) % lineupSize
+		// Calculate ideal position for second pitcher: (firstPos + fixedDistance) % lineupSize
 		idealPos := (firstPos + fixedDistance) % lineupSize
 		
 		// Move second pitcher to the ideal position if needed

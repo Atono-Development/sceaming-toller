@@ -198,12 +198,26 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">
-                        {player.teamMember?.gender === "M" ? "Male" : "Female"}
-                      </Badge>
-                      {player.isGenerated && (
-                        <Badge variant="secondary">Auto-generated</Badge>
-                      )}
+                      {(() => {
+                        const isPitcher = fieldingLineup.some(
+                          (fieldingPlayer) =>
+                            fieldingPlayer.teamMemberId ===
+                              player.teamMemberId &&
+                            fieldingPlayer.position === "Pitcher"
+                        );
+                        return (
+                          <>
+                            {isPitcher && (
+                              <Badge variant="default">Pitcher</Badge>
+                            )}
+                            <Badge variant="outline">
+                              {player.teamMember?.gender === "M"
+                                ? "Male"
+                                : "Female"}
+                            </Badge>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 ))}

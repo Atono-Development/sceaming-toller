@@ -162,24 +162,41 @@ func spacePitchers(positions []BattingPosition, pitcherIDs []uuid.UUID) []Battin
 		return positions
 	}
 
-	// Calculate ideal spacing to distribute pitchers evenly throughout the lineup
+	// Sort pitcher positions to process them in order
+	sort.Ints(pitcherPositions)
+
+	// Handle 2 pitchers with exactly 5 positions apart for 11-player lineup
+	if len(pitcherPositions) == 2 {
+		lineupSize := len(positions)
+		
+		// For 11-player lineup, place second pitcher exactly 5 positions away from first
+		firstPos := pitcherPositions[0]
+		fixedDistance := 5 // Exactly 5 positions apart for 11-player lineup
+		
+		// Calculate ideal position for second pitcher: (firstPos + 5) % lineupSize
+		idealPos := (firstPos + fixedDistance) % lineupSize
+		
+		// Move second pitcher to the ideal position if needed
+		if pitcherPositions[1] != idealPos {
+			posToMove := pitcherPositions[1]
+			// Swap the second pitcher with the player at the ideal position
+			positions[posToMove], positions[idealPos] = positions[idealPos], positions[posToMove]
+		}
+		
+		return positions
+	}
+
+	// For 3+ pitchers, distribute evenly throughout the lineup
 	numPitchers := len(pitcherPositions)
 	lineupSize := len(positions)
 	idealSpacing := lineupSize / numPitchers
 	
-	// Ensure minimum spacing of 5, but don't exceed lineup size
+	// Ensure minimum spacing of 5
 	if idealSpacing < 5 {
 		idealSpacing = 5
 	}
-	if idealSpacing > lineupSize/2 {
-		idealSpacing = lineupSize / 2
-	}
 
-	// Sort pitcher positions to process them in order
-	sort.Ints(pitcherPositions)
-
-	// Redistribute pitchers evenly
-	// Start with the first pitcher's current position (or position 0 if none)
+	// Start with the first pitcher's current position
 	startPos := 0
 	if len(pitcherPositions) > 0 {
 		startPos = pitcherPositions[0]
@@ -199,7 +216,7 @@ func spacePitchers(positions []BattingPosition, pitcherIDs []uuid.UUID) []Battin
 
 	// Reinsert pitchers at evenly spaced positions
 	for i, pitcher := range pitchers {
-		targetPos := (startPos + i*idealSpacing) % lineupSize
+		targetPos := startPos + i*idealSpacing
 		
 		// Ensure we don't go beyond current lineup size
 		if targetPos >= len(positions) {

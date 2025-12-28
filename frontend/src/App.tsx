@@ -16,6 +16,7 @@ import { CreateGamePage } from "./pages/teams/CreateGamePage";
 import { EditGamePage } from "./pages/teams/EditGamePage";
 import { ScoreGamePage } from "./pages/teams/ScoreGamePage";
 import { RosterPage } from "./pages/teams/RosterPage";
+import LineupPage from "./pages/teams/LineupPage";
 import { AcceptInvitePage } from "./pages/AcceptInvitePage";
 import Layout from "./components/Layout";
 
@@ -71,6 +72,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <RosterPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teams/:teamId/lineup"
+                element={
+                  <ProtectedRoute>
+                    <LineupPage />
                   </ProtectedRoute>
                 }
               />

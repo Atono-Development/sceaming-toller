@@ -46,6 +46,12 @@ export default function Layout() {
                   </Button>
                   <Button
                     variant="ghost"
+                    onClick={() => navigate(`/teams/${currentTeam.id}/lineup`)}
+                  >
+                    Lineup
+                  </Button>
+                  <Button
+                    variant="ghost"
                     onClick={() => navigate(`/teams/${currentTeam.id}/profile`)}
                   >
                     Profile

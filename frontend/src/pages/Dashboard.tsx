@@ -305,7 +305,7 @@ export default function Dashboard() {
             <CardContent>
               {upcomingGames.length > 0 ? (
                 <div className="space-y-4">
-                  {upcomingGames.map((game: Game) => {
+                  {upcomingGames.slice(0, 3).map((game: Game) => {
                     const localDate = utcToLocalDate(game.date);
 
                     return (

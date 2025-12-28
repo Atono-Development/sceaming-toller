@@ -80,6 +80,15 @@ func main() {
 				r.Put("/games/{gameID}/score", handlers.UpdateGameScore)
 				r.Put("/games/{gameID}/innings", handlers.UpdateInningScores)
 				
+				// Lineup management routes
+				r.Post("/games/{gameID}/batting-order/generate", handlers.GenerateBattingOrder)
+				r.Put("/games/{gameID}/batting-order", handlers.UpdateBattingOrder)
+				r.Delete("/games/{gameID}/batting-order", handlers.DeleteBattingOrder)
+				
+				r.Post("/games/{gameID}/fielding/generate", handlers.GenerateFieldingLineup)
+				r.Put("/games/{gameID}/fielding", handlers.UpdateFieldingLineup)
+				r.Delete("/games/{gameID}/fielding", handlers.DeleteFieldingLineup)
+				
 				r.Post("/invitations", handlers.InviteMember)
 				r.Delete("/members/{memberID}", handlers.RemoveMember)
 				r.Get("/members/preferences", handlers.GetAllTeamMemberPreferences)

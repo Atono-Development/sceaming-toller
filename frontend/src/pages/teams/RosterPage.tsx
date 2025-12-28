@@ -57,11 +57,12 @@ export function RosterPage() {
         description: "The team member has been removed.",
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: string } };
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.response?.data || "Failed to remove member",
+        description: err.response?.data || "Failed to remove member",
       });
     },
   });

@@ -49,7 +49,7 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
       setPreferences(preferencesData);
       setIsPitcher(memberInfo.role.includes("pitcher"));
       setGender(memberInfo.gender || "");
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to load preferences",
@@ -118,7 +118,7 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
         title: "Success",
         description: "Preferences saved successfully",
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to save preferences",

@@ -37,6 +37,7 @@ export interface BattingOrder {
   isGenerated: boolean;
   createdAt: string;
   teamMember?: {
+    gender: string;
     user?: {
       name: string;
     };
@@ -52,6 +53,7 @@ export interface FieldingLineup {
   isGenerated: boolean;
   createdAt: string;
   teamMember?: {
+    gender: string;
     user?: {
       name: string;
     };
@@ -94,9 +96,26 @@ export const getBattingOrder = async (teamId: string, gameId: string) => {
   return response.data;
 };
 
+export const generateBattingOrder = async (teamId: string, gameId: string) => {
+  const response = await api.post<BattingOrder[]>(
+    `/teams/${teamId}/games/${gameId}/batting-order/generate`
+  );
+  return response.data;
+};
+
 export const getFieldingLineup = async (teamId: string, gameId: string) => {
   const response = await api.get<FieldingLineup[]>(
     `/teams/${teamId}/games/${gameId}/fielding`
+  );
+  return response.data;
+};
+
+export const generateCompleteFieldingLineup = async (
+  teamId: string,
+  gameId: string
+) => {
+  const response = await api.post<FieldingLineup[]>(
+    `/teams/${teamId}/games/${gameId}/fielding/generate-complete`
   );
   return response.data;
 };

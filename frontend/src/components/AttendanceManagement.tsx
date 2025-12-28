@@ -15,6 +15,7 @@ import {
   type Game,
 } from "../api/games";
 import { useToast } from "../hooks/use-toast";
+import { useAuth } from "../contexts/AuthContext";
 
 interface AttendanceManagementProps {
   teamId: string;
@@ -30,19 +31,22 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     loadAttendance();
-  }, [teamId, game.id]);
+  }, [teamId, game.id, user]);
 
   const loadAttendance = async () => {
     try {
       const data = await getAttendance(teamId, game.id);
       setAttendance(data);
 
-      // Find current user's attendance (this would need user context in a real app)
-      // For now, we'll just default to 'not_going'
-      setMyAttendance("not_going");
+      // Find current user's attendance
+      const userAttendance = data.find(
+        (att) => att.teamMember?.user?.email === user?.email
+      );
+      setMyAttendance(userAttendance?.status || "not_going");
     } catch {
       toast({
         title: "Error",

@@ -37,9 +37,17 @@ func GenerateBattingOrder(gameID uuid.UUID) ([]models.BattingOrder, error) {
 		confirmed[i] = att.TeamMember
 	}
 
-	// 3. Separate by gender
+	// 3. Separate by gender and shuffle for randomness
 	males := filterByGender(confirmed, "M")
 	females := filterByGender(confirmed, "F")
+	
+	// Shuffle each gender group to add randomness
+	rand.Shuffle(len(males), func(i, j int) {
+		males[i], males[j] = males[j], males[i]
+	})
+	rand.Shuffle(len(females), func(i, j int) {
+		females[i], females[j] = females[j], females[i]
+	})
 
 	// 4. Get pitchers for this team
 	pitchers := filterByRole(confirmed, "pitcher")
@@ -48,12 +56,17 @@ func GenerateBattingOrder(gameID uuid.UUID) ([]models.BattingOrder, error) {
 		pitcherIDs[i] = p.ID
 	}
 
-	// 5. Alternate M-F
+	// 5. Alternate M-F with random starting gender
 	var positions []BattingPosition
-	if len(males) >= len(females) {
+	// Randomly decide which gender starts the batting order
+	if rand.Intn(2) == 0 && len(males) >= len(females) {
 		positions = alternateGenders(males, females)
-	} else {
+	} else if len(males) >= len(females) {
 		positions = alternateGenders(females, males)
+	} else if rand.Intn(2) == 0 {
+		positions = alternateGenders(females, males)
+	} else {
+		positions = alternateGenders(males, females)
 	}
 
 	// 6. Space out pitchers

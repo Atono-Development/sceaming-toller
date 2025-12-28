@@ -13,6 +13,11 @@ import { getTeamGames, type Game } from "../api/games";
 import { useAuth } from "../contexts/AuthContext";
 import { useTeamContext } from "../contexts/TeamContext";
 import { useToast } from "../hooks/use-toast";
+import {
+  utcToLocalDate,
+  getTodayAtMidnight,
+  isGameInPast as isGameInPastUtil,
+} from "../utils/dateUtils";
 
 const PlayerDashboard: React.FC = () => {
   const [games, setGames] = useState<Game[]>([]);
@@ -41,10 +46,12 @@ const PlayerDashboard: React.FC = () => {
       setGames(data);
 
       // Select the next upcoming game by default
-      const upcomingGames = data.filter(
-        (game) =>
-          new Date(game.date) >= new Date() && game.status === "scheduled"
-      );
+      const now = getTodayAtMidnight();
+
+      const upcomingGames = data.filter((game) => {
+        const localGameDate = utcToLocalDate(game.date);
+        return localGameDate >= now && game.status === "scheduled";
+      });
 
       if (upcomingGames.length > 0) {
         setSelectedGame(upcomingGames[0]);
@@ -63,7 +70,8 @@ const PlayerDashboard: React.FC = () => {
   };
 
   const formatGameDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    const localDate = utcToLocalDate(dateString);
+    return localDate.toLocaleDateString("en-US", {
       weekday: "short",
       month: "short",
       day: "numeric",
@@ -71,7 +79,7 @@ const PlayerDashboard: React.FC = () => {
   };
 
   const isGameInPast = (game: Game) => {
-    return new Date(game.date) < new Date();
+    return isGameInPastUtil(game.date);
   };
 
   const getGameStatusColor = (status: string) => {
@@ -126,35 +134,111 @@ const PlayerDashboard: React.FC = () => {
                   No games scheduled for this team.
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {games.map((game) => (
-                    <div
-                      key={game.id}
-                      className={`flex items-center justify-between p-3 rounded border cursor-pointer transition-colors hover:bg-muted/50 ${
-                        selectedGame?.id === game.id ? "bg-muted" : ""
-                      }`}
-                      onClick={() => setSelectedGame(game)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-3 h-3 rounded-full ${getGameStatusColor(
-                            game.status
-                          )}`}
-                        ></div>
-                        <div>
-                          <div className="font-medium">{game.opposingTeam}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {formatGameDate(game.date)} at {game.time} •{" "}
-                            {game.location}
+                (() => {
+                  const now = getTodayAtMidnight();
+
+                  const upcomingGames = games
+                    .filter((game: Game) => {
+                      const localGameDate = utcToLocalDate(game.date);
+                      return localGameDate >= now;
+                    })
+                    .sort(
+                      (a, b) =>
+                        new Date(a.date).getTime() - new Date(b.date).getTime()
+                    );
+
+                  const pastGames = games
+                    .filter((game: Game) => {
+                      const localGameDate = utcToLocalDate(game.date);
+                      return localGameDate < now;
+                    })
+                    .sort(
+                      (a, b) =>
+                        new Date(b.date).getTime() - new Date(a.date).getTime()
+                    );
+
+                  return (
+                    <div className="space-y-4">
+                      {upcomingGames.length > 0 && (
+                        <>
+                          <div className="text-lg font-semibold text-slate-700">
+                            Upcoming Games
                           </div>
-                        </div>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {isGameInPast(game) ? "Past" : "Upcoming"}
-                      </div>
+                          <div className="space-y-2">
+                            {upcomingGames.map((game) => (
+                              <div
+                                key={game.id}
+                                className={`flex items-center justify-between p-3 rounded border cursor-pointer transition-colors hover:bg-muted/50 ${
+                                  selectedGame?.id === game.id ? "bg-muted" : ""
+                                }`}
+                                onClick={() => setSelectedGame(game)}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className={`w-3 h-3 rounded-full ${getGameStatusColor(
+                                      game.status
+                                    )}`}
+                                  ></div>
+                                  <div>
+                                    <div className="font-medium">
+                                      {game.opposingTeam}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {formatGameDate(game.date)} at {game.time}{" "}
+                                      • {game.location}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-sm font-medium text-blue-600">
+                                  Upcoming
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+
+                      {pastGames.length > 0 && (
+                        <>
+                          <div className="text-lg font-semibold text-slate-500 mt-6">
+                            Past Games
+                          </div>
+                          <div className="space-y-2">
+                            {pastGames.map((game) => (
+                              <div
+                                key={game.id}
+                                className={`flex items-center justify-between p-3 rounded border cursor-pointer transition-colors hover:bg-muted/50 opacity-75 ${
+                                  selectedGame?.id === game.id ? "bg-muted" : ""
+                                }`}
+                                onClick={() => setSelectedGame(game)}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className={`w-3 h-3 rounded-full ${getGameStatusColor(
+                                      game.status
+                                    )}`}
+                                  ></div>
+                                  <div>
+                                    <div className="font-medium">
+                                      {game.opposingTeam}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {formatGameDate(game.date)} at {game.time}{" "}
+                                      • {game.location}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  Past
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()
               )}
             </CardContent>
           </Card>

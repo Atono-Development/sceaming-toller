@@ -11,6 +11,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  getMyPreferences,
+  getMyTeamMemberInfo,
+  type TeamMemberPreference,
+} from "../api/members";
+import { getAttendance, updateAttendance, type Attendance } from "../api/games";
+import { utcToLocalDate, getTodayAtMidnight } from "../utils/dateUtils";
 
 interface Game {
   id: string;
@@ -26,29 +33,22 @@ export default function Dashboard() {
   const { currentTeam } = useTeamContext();
   const navigate = useNavigate();
   const [upcomingGames, setUpcomingGames] = useState<Game[]>([]);
+  const [preferences, setPreferences] = useState<TeamMemberPreference[]>([]);
+  const [isPitcher, setIsPitcher] = useState(false);
+  const [loadingPreferences, setLoadingPreferences] = useState(false);
+  const [attendance, setAttendance] = useState<Attendance | null>(null);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   useEffect(() => {
     if (currentTeam?.id) {
       getTeamGames(currentTeam.id)
         .then((games: Game[]) => {
-          const now = new Date();
-          // Reset time to start of day for comparison to include games today
-          now.setHours(0, 0, 0, 0);
-
+          const now = getTodayAtMidnight();
           const nextWeek = new Date(now);
           nextWeek.setDate(now.getDate() + 7);
 
           const filtered = games.filter((g: Game) => {
-            // Parse the date string as UTC components to construct a specific calendar date in local time
-            // g.date comes as "2025-12-25T00:00:00Z" (UTC midnight).
-            // new Date(g.date) shifts it to local time (e.g. Dec 24 4pm).
-            // We want "Dec 25" regardless of where the user is.
-            const utcDate = new Date(g.date);
-            const gameDate = new Date(
-              utcDate.getUTCFullYear(),
-              utcDate.getUTCMonth(),
-              utcDate.getUTCDate()
-            );
+            const gameDate = utcToLocalDate(g.date);
 
             return (
               gameDate >= now &&
@@ -62,6 +62,61 @@ export default function Dashboard() {
         .catch((err: unknown) => console.error("Failed to fetch games:", err));
     }
   }, [currentTeam]);
+
+  useEffect(() => {
+    if (currentTeam?.id) {
+      setLoadingPreferences(true);
+      Promise.all([
+        getMyPreferences(currentTeam.id),
+        getMyTeamMemberInfo(currentTeam.id),
+      ])
+        .then(([preferencesData, memberInfo]) => {
+          setPreferences(preferencesData);
+          setIsPitcher(memberInfo.role.includes("pitcher"));
+        })
+        .catch((err: unknown) =>
+          console.error("Failed to fetch preferences:", err)
+        )
+        .finally(() => setLoadingPreferences(false));
+    }
+  }, [currentTeam]);
+
+  useEffect(() => {
+    if (currentTeam?.id && upcomingGames.length > 0) {
+      const nextGame = upcomingGames[0];
+      setLoadingAttendance(true);
+      getAttendance(currentTeam.id, nextGame.id)
+        .then((attendanceData) => {
+          const myAttendance = attendanceData.find(
+            (a) => a.teamMember?.user?.email === user?.email
+          );
+          setAttendance(myAttendance || null);
+        })
+        .catch((err: unknown) =>
+          console.error("Failed to fetch attendance:", err)
+        )
+        .finally(() => setLoadingAttendance(false));
+    }
+  }, [currentTeam, upcomingGames, user?.email]);
+
+  const handleAttendanceChange = (status: string) => {
+    if (currentTeam?.id && upcomingGames.length > 0) {
+      const nextGame = upcomingGames[0];
+      updateAttendance(currentTeam.id, nextGame.id, status)
+        .then(() => {
+          setAttendance({
+            id: "",
+            teamMemberId: "",
+            gameId: nextGame.id,
+            status,
+            updatedAt: new Date().toISOString(),
+          });
+        })
+        .catch((err: unknown) =>
+          console.error("Failed to update attendance:", err)
+        );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 p-8">
@@ -111,17 +166,127 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle>My Profile</CardTitle>
               <CardDescription>
-                Manage your position preferences
+                {loadingPreferences
+                  ? "Loading preferences..."
+                  : preferences.length > 0 || isPitcher
+                  ? "Your position preferences"
+                  : "Manage your position preferences"}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {currentTeam ? (
-                <Button
-                  className="w-full"
-                  onClick={() => navigate(`/teams/${currentTeam.id}/profile`)}
-                >
-                  Update Preferences
-                </Button>
+              {loadingPreferences ? (
+                <div className="text-slate-500 italic">
+                  Loading preferences...
+                </div>
+              ) : currentTeam ? (
+                preferences.length > 0 || isPitcher ? (
+                  <div className="space-y-3">
+                    {isPitcher && (
+                      <div className="flex items-center space-x-2">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm font-medium">
+                          Pitcher
+                        </span>
+                      </div>
+                    )}
+                    {preferences.length > 0 && (
+                      <div className="flex items-center space-x-2">
+                        {preferences
+                          .sort((a, b) => a.preferenceRank - b.preferenceRank)
+                          .map((pref) => (
+                            <span
+                              key={pref.preferenceRank}
+                              className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm font-medium"
+                            >
+                              {pref.position}
+                            </span>
+                          ))}
+                      </div>
+                    )}
+                    <Button
+                      className="mt-3 w-full"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        navigate(`/teams/${currentTeam.id}/profile`)
+                      }
+                    >
+                      Edit Preferences
+                    </Button>
+
+                    {upcomingGames.length > 0 && (
+                      <div className="mt-4 pt-4 border-t">
+                        <div className="text-sm text-slate-600 mb-2">
+                          Next game attendance:
+                        </div>
+                        {loadingAttendance ? (
+                          <div className="text-slate-500 text-sm italic">
+                            Loading...
+                          </div>
+                        ) : (
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              variant={
+                                attendance?.status === "going"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className={`flex-1 ${
+                                attendance?.status === "going"
+                                  ? "bg-green-600 hover:bg-green-700 text-white"
+                                  : ""
+                              }`}
+                              onClick={() => handleAttendanceChange("going")}
+                            >
+                              Going
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant={
+                                attendance?.status === "maybe"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className={`flex-1 ${
+                                attendance?.status === "maybe"
+                                  ? "bg-yellow-500 hover:bg-yellow-600 text-white"
+                                  : ""
+                              }`}
+                              onClick={() => handleAttendanceChange("maybe")}
+                            >
+                              Maybe
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant={
+                                attendance?.status === "not_going"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className={`flex-1 ${
+                                attendance?.status === "not_going"
+                                  ? "bg-red-600 hover:bg-red-700 text-white"
+                                  : ""
+                              }`}
+                              onClick={() =>
+                                handleAttendanceChange("not_going")
+                              }
+                            >
+                              Not Going
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Button
+                    className="w-full"
+                    onClick={() => navigate(`/teams/${currentTeam.id}/profile`)}
+                  >
+                    Set Preferences
+                  </Button>
+                )
               ) : (
                 <p className="text-slate-500 italic">
                   Select a team to manage preferences.
@@ -140,14 +305,8 @@ export default function Dashboard() {
             <CardContent>
               {upcomingGames.length > 0 ? (
                 <div className="space-y-4">
-                  {upcomingGames.map((game: Game) => {
-                    const d = new Date(game.date);
-                    // Force local date interpretation
-                    const localDate = new Date(
-                      d.getUTCFullYear(),
-                      d.getUTCMonth(),
-                      d.getUTCDate()
-                    );
+                  {upcomingGames.slice(0, 3).map((game: Game) => {
+                    const localDate = utcToLocalDate(game.date);
 
                     return (
                       <div

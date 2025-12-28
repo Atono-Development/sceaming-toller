@@ -13,6 +13,8 @@ import PlayerDashboard from "./pages/PlayerDashboard";
 import { CreateTeamPage } from "./pages/teams/CreateTeamPage";
 import { GamesPage } from "./pages/teams/GamesPage";
 import { CreateGamePage } from "./pages/teams/CreateGamePage";
+import { EditGamePage } from "./pages/teams/EditGamePage";
+import { ScoreGamePage } from "./pages/teams/ScoreGamePage";
 import { RosterPage } from "./pages/teams/RosterPage";
 import { AcceptInvitePage } from "./pages/AcceptInvitePage";
 import Layout from "./components/Layout";
@@ -85,6 +87,22 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <CreateGamePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teams/:teamId/games/:gameId/edit"
+                element={
+                  <ProtectedRoute>
+                    <EditGamePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teams/:teamId/games/:gameId/score"
+                element={
+                  <ProtectedRoute>
+                    <ScoreGamePage />
                   </ProtectedRoute>
                 }
               />

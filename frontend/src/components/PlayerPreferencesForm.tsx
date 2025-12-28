@@ -15,6 +15,7 @@ import {
   updateMyPreferences,
   getMyTeamMemberInfo,
   updateMyPitcherStatus,
+  updateMyGender,
   type TeamMemberPreference,
 } from "../api/members";
 import { useToast } from "../hooks/use-toast";
@@ -30,6 +31,7 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
 }) => {
   const [preferences, setPreferences] = useState<TeamMemberPreference[]>([]);
   const [isPitcher, setIsPitcher] = useState(false);
+  const [gender, setGender] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
@@ -46,6 +48,7 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
       ]);
       setPreferences(preferencesData);
       setIsPitcher(memberInfo.role.includes("pitcher"));
+      setGender(memberInfo.gender || undefined);
     } catch (error) {
       toast({
         title: "Error",
@@ -106,6 +109,11 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
       // Save pitcher status
       await updateMyPitcherStatus(teamId, isPitcher);
 
+      // Save gender
+      if (gender) {
+        await updateMyGender(teamId, gender);
+      }
+
       toast({
         title: "Success",
         description: "Preferences saved successfully",
@@ -141,7 +149,7 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Position Preferences</CardTitle>
+        <CardTitle>Player Information & Preferences</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-sm text-muted-foreground mb-4">
@@ -150,6 +158,25 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
         </div>
 
         <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="gender">Gender</Label>
+            <Select
+              value={gender || undefined}
+              onValueChange={(value) => setGender(value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="M">Male (M)</SelectItem>
+                <SelectItem value="F">Female (F)</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="text-sm text-muted-foreground">
+              Gender information is required for proper lineup creation.
+            </div>
+          </div>
+
           <div className="flex items-center space-x-2">
             <Checkbox
               id="pitcher"

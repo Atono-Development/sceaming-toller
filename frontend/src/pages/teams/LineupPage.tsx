@@ -213,23 +213,61 @@ const LineupPage: React.FC = () => {
   };
 
   const editableFieldingByInning = () => {
-    const grouped: Record<number, FieldingLineup[]> = {};
+    const grouped: Record<
+      number,
+      { fielding: FieldingLineup[]; bench: FieldingLineup[] }
+    > = {};
     editableFieldingLineup.forEach((player) => {
       if (!grouped[player.inning]) {
-        grouped[player.inning] = [];
+        grouped[player.inning] = { fielding: [], bench: [] };
       }
-      grouped[player.inning].push(player);
+
+      const fieldingPositions = [
+        "1B",
+        "2B",
+        "3B",
+        "SS",
+        "Rover",
+        "CF",
+        "RF",
+        "LF",
+        "C",
+      ];
+      if (fieldingPositions.includes(player.position)) {
+        grouped[player.inning].fielding.push(player);
+      } else {
+        grouped[player.inning].bench.push(player);
+      }
     });
     return grouped;
   };
 
   const groupFieldingByInning = () => {
-    const grouped: Record<number, FieldingLineup[]> = {};
+    const grouped: Record<
+      number,
+      { fielding: FieldingLineup[]; bench: FieldingLineup[] }
+    > = {};
     fieldingLineup.forEach((player) => {
       if (!grouped[player.inning]) {
-        grouped[player.inning] = [];
+        grouped[player.inning] = { fielding: [], bench: [] };
       }
-      grouped[player.inning].push(player);
+
+      const fieldingPositions = [
+        "1B",
+        "2B",
+        "3B",
+        "SS",
+        "Rover",
+        "CF",
+        "RF",
+        "LF",
+        "C",
+      ];
+      if (fieldingPositions.includes(player.position)) {
+        grouped[player.inning].fielding.push(player);
+      } else {
+        grouped[player.inning].bench.push(player);
+      }
     });
     return grouped;
   };
@@ -238,6 +276,11 @@ const LineupPage: React.FC = () => {
     const stats: Record<string, { innings: number; positions: string[] }> = {};
 
     fieldingLineup.forEach((player) => {
+      // Don't count bench assignments as playing time
+      if (player.position === "Bench") {
+        return;
+      }
+
       const playerName = player.teamMember?.user?.name || "Unknown";
       if (!stats[playerName]) {
         stats[playerName] = { innings: 0, positions: [] };
@@ -256,14 +299,93 @@ const LineupPage: React.FC = () => {
 
     try {
       setLoading(true);
-      await generateCompleteFieldingLineup(teamId!, selectedGame.id);
+      const generatedLineup = await generateCompleteFieldingLineup(
+        teamId!,
+        selectedGame.id
+      );
+      console.log("Generated lineup from API:", generatedLineup);
+
       await loadLineups();
+      console.log("Loaded lineup after generation:", fieldingLineup);
+
+      // Check if fielding lineup was actually generated
+      if (fieldingLineup.length === 0) {
+        toast({
+          title: "Error",
+          description:
+            "No fielding positions were generated. Please check player availability and try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // After generating lineup, automatically assign unassigned players to bench
+      const availablePlayers = getAvailablePlayers();
+      console.log("Available players:", availablePlayers.length);
+
+      const assignedPlayerIds = new Set(
+        fieldingLineup.map((p) => p.teamMemberId)
+      );
+      console.log("Assigned player IDs:", assignedPlayerIds.size);
+
+      const unassignedPlayers = availablePlayers.filter(
+        (player) => player?.id && !assignedPlayerIds.has(player.id)
+      );
+      console.log("Unassigned players:", unassignedPlayers.length);
+
+      // Debug: Check if any players are assigned to bench positions already
+      const benchAssignments = fieldingLineup.filter(
+        (p) => p.position === "Bench"
+      );
+      console.log("Existing bench assignments:", benchAssignments.length);
+
+      if (unassignedPlayers.length > 0) {
+        // Create bench assignments for all 7 innings
+        const benchAssignments: FieldingLineup[] = [];
+        unassignedPlayers.forEach((player) => {
+          if (player?.id) {
+            for (let inning = 1; inning <= 7; inning++) {
+              benchAssignments.push({
+                id: `bench-${player.id}-${inning}`,
+                gameId: selectedGame.id,
+                inning,
+                teamMemberId: player.id,
+                position: "Bench",
+                isGenerated: true,
+                createdAt: new Date().toISOString(),
+                teamMember: {
+                  gender: "M", // Default gender - should be fetched from team member data
+                  user: player.user,
+                },
+              });
+            }
+          }
+        });
+
+        // Update both the main lineup and editable lineup
+        const updatedLineup = [...fieldingLineup, ...benchAssignments];
+        setFieldingLineup(updatedLineup);
+        setEditableFieldingLineup(updatedLineup);
+
+        toast({
+          title: "Players Assigned to Bench",
+          description: `${unassignedPlayers.length} player(s) automatically assigned to bench for all innings`,
+        });
+      } else {
+        toast({
+          title: "All Players Assigned",
+          description:
+            "All available players are already assigned to fielding positions",
+        });
+      }
+
       toast({
         title: "Success",
         description:
           "Generated complete 7-inning fielding lineup with balanced playing time",
       });
     } catch (error) {
+      console.error("Error generating lineup:", error);
       toast({
         title: "Error",
         description: "Failed to generate complete lineup",
@@ -281,6 +403,24 @@ const LineupPage: React.FC = () => {
       setLoading(true);
       await generateBattingOrder(teamId!, selectedGame.id);
       await loadLineups();
+
+      // After generating batting order, ensure all available players are either in batting order or on bench
+      const availablePlayers = getAvailablePlayers();
+      const assignedPlayerIds = new Set(
+        battingOrder.map((p) => p.teamMemberId)
+      );
+
+      const unassignedPlayers = availablePlayers.filter(
+        (player) => player?.id && !assignedPlayerIds.has(player.id)
+      );
+
+      if (unassignedPlayers.length > 0) {
+        toast({
+          title: "Players Available",
+          description: `${unassignedPlayers.length} player(s) not in batting order (can be assigned to bench in fielding)`,
+        });
+      }
+
       toast({
         title: "Success",
         description: "Generated batting order with gender balance",
@@ -294,6 +434,48 @@ const LineupPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const addBenchAssignments = () => {
+    const availablePlayers = getAvailablePlayers();
+    const assignedPlayerIds = new Set(
+      editableFieldingLineup.map((p) => p.teamMemberId)
+    );
+
+    const unassignedPlayers = availablePlayers.filter(
+      (player) => player?.id && !assignedPlayerIds.has(player.id)
+    );
+
+    if (unassignedPlayers.length === 0) return;
+
+    // Create bench assignments for all 7 innings
+    const benchAssignments: FieldingLineup[] = [];
+    unassignedPlayers.forEach((player) => {
+      if (player?.id) {
+        for (let inning = 1; inning <= 7; inning++) {
+          benchAssignments.push({
+            id: `bench-${player.id}-${inning}`,
+            gameId: selectedGame!.id,
+            inning,
+            teamMemberId: player.id,
+            position: "Bench",
+            isGenerated: true,
+            createdAt: new Date().toISOString(),
+            teamMember: {
+              gender: "M", // Default gender - should be fetched from team member data
+              user: player.user,
+            },
+          });
+        }
+      }
+    });
+
+    setEditableFieldingLineup([...editableFieldingLineup, ...benchAssignments]);
+
+    toast({
+      title: "Bench Assignments Added",
+      description: `${unassignedPlayers.length} player(s) added to bench for all innings`,
+    });
   };
 
   const getPositionColor = (position: string) => {
@@ -621,13 +803,22 @@ const LineupPage: React.FC = () => {
                   <h3 className="text-lg font-semibold">Fielding Positions</h3>
                   <div className="flex gap-2">
                     {editingFieldingLineup && (
-                      <Button
-                        onClick={cancelEditingFieldingLineup}
-                        variant="outline"
-                        size="sm"
-                      >
-                        Cancel
-                      </Button>
+                      <>
+                        <Button
+                          onClick={addBenchAssignments}
+                          variant="secondary"
+                          size="sm"
+                        >
+                          Add Bench Players
+                        </Button>
+                        <Button
+                          onClick={cancelEditingFieldingLineup}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Cancel
+                        </Button>
+                      </>
                     )}
                     <Button
                       onClick={
@@ -661,81 +852,148 @@ const LineupPage: React.FC = () => {
                         : fieldingByInning
                     )
                       .sort(([a], [b]) => parseInt(a) - parseInt(b))
-                      .map(([inning, players]) => (
-                        <div key={inning} className="space-y-2">
+                      .map(([inning, { fielding, bench }]) => (
+                        <div key={inning} className="space-y-4">
                           <h3 className="text-lg font-semibold">
                             Inning {inning}
                           </h3>
-                          <div className="grid grid-cols-3 gap-2">
-                            {players.map((player) => (
-                              <div
-                                key={player.id}
-                                className="flex items-center gap-2 p-2 rounded border bg-white"
-                              >
-                                {editingFieldingLineup ? (
-                                  <div className="flex items-center gap-2">
-                                    <Select
-                                      value={player.position}
-                                      onValueChange={(value) =>
-                                        updatePlayerPosition(player.id, value)
-                                      }
-                                    >
-                                      <SelectTrigger className="w-20">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {positions.map((position) => (
-                                          <SelectItem
-                                            key={position}
-                                            value={position}
-                                          >
-                                            {position}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                    <Select
-                                      value={player.teamMemberId || ""}
-                                      onValueChange={(value) =>
-                                        updatePlayerAssignment(player.id, value)
-                                      }
-                                    >
-                                      <SelectTrigger className="w-32">
-                                        <SelectValue placeholder="Select player" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {getAvailablePlayers().map(
-                                          (teamMember) => (
+
+                          {/* Fielding Positions */}
+                          <div className="space-y-2">
+                            <h4 className="text-md font-medium text-gray-700">
+                              Fielding Positions
+                            </h4>
+                            <div className="grid grid-cols-3 gap-2">
+                              {fielding.map((player) => (
+                                <div
+                                  key={player.id}
+                                  className="flex items-center gap-2 p-2 rounded border bg-white"
+                                >
+                                  {editingFieldingLineup ? (
+                                    <div className="flex items-center gap-2">
+                                      <Select
+                                        value={player.position}
+                                        onValueChange={(value) =>
+                                          updatePlayerPosition(player.id, value)
+                                        }
+                                      >
+                                        <SelectTrigger className="w-20">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {positions.map((position) => (
                                             <SelectItem
-                                              key={teamMember?.id}
-                                              value={teamMember?.id || ""}
+                                              key={position}
+                                              value={position}
                                             >
-                                              {teamMember?.user?.name ||
-                                                "Unknown"}
+                                              {position}
                                             </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      <Select
+                                        value={player.teamMemberId || ""}
+                                        onValueChange={(value) =>
+                                          updatePlayerAssignment(
+                                            player.id,
+                                            value
                                           )
+                                        }
+                                      >
+                                        <SelectTrigger className="w-32">
+                                          <SelectValue placeholder="Select player" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {getAvailablePlayers().map(
+                                            (teamMember) => (
+                                              <SelectItem
+                                                key={teamMember?.id}
+                                                value={teamMember?.id || ""}
+                                              >
+                                                {teamMember?.user?.name ||
+                                                  "Unknown"}
+                                              </SelectItem>
+                                            )
+                                          )}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <Badge
+                                        className={getPositionColor(
+                                          player.position
                                         )}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <Badge
-                                      className={getPositionColor(
-                                        player.position
-                                      )}
-                                    >
-                                      {player.position}
-                                    </Badge>
-                                    <span className="text-sm font-medium">
-                                      {player.teamMember?.user?.name ||
-                                        "Unknown"}
-                                    </span>
-                                  </>
-                                )}
-                              </div>
-                            ))}
+                                      >
+                                        {player.position}
+                                      </Badge>
+                                      <span className="text-sm font-medium">
+                                        {player.teamMember?.user?.name ||
+                                          "Unknown"}
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           </div>
+
+                          {/* Bench Players */}
+                          {bench.length > 0 && (
+                            <div className="space-y-2">
+                              <h4 className="text-md font-medium text-gray-700">
+                                Bench Players ({bench.length})
+                              </h4>
+                              <div className="grid grid-cols-3 gap-2">
+                                {bench.map((player) => (
+                                  <div
+                                    key={player.id}
+                                    className="flex items-center gap-2 p-2 rounded border bg-gray-50"
+                                  >
+                                    {editingFieldingLineup ? (
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant="secondary">Bench</Badge>
+                                        <Select
+                                          value={player.teamMemberId || ""}
+                                          onValueChange={(value) =>
+                                            updatePlayerAssignment(
+                                              player.id,
+                                              value
+                                            )
+                                          }
+                                        >
+                                          <SelectTrigger className="w-32">
+                                            <SelectValue placeholder="Select player" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {getAvailablePlayers().map(
+                                              (teamMember) => (
+                                                <SelectItem
+                                                  key={teamMember?.id}
+                                                  value={teamMember?.id || ""}
+                                                >
+                                                  {teamMember?.user?.name ||
+                                                    "Unknown"}
+                                                </SelectItem>
+                                              )
+                                            )}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <Badge variant="secondary">Bench</Badge>
+                                        <span className="text-sm font-medium">
+                                          {player.teamMember?.user?.name ||
+                                            "Unknown"}
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                   </div>

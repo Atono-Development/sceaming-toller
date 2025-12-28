@@ -199,12 +199,11 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
                     </div>
                     <div className="flex items-center gap-2">
                       {(() => {
-                        const isPitcher = fieldingLineup.some(
-                          (fieldingPlayer) =>
-                            fieldingPlayer.teamMemberId ===
-                              player.teamMemberId &&
-                            fieldingPlayer.position === "Pitcher"
-                        );
+                        const isPitcher = player.teamMember?.role
+                          .split(",")
+                          .map((role) => role.trim().toLowerCase())
+                          .includes("pitcher");
+
                         return (
                           <>
                             {isPitcher && (

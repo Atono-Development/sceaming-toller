@@ -1,5 +1,23 @@
 import React, { useState } from "react";
 import { useParams } from "react-router-dom";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +45,63 @@ import {
   type Game,
 } from "@/api/games";
 
+// Sortable component for batting order players
+const SortableBattingPlayer: React.FC<{
+  player: BattingOrder;
+  isEditing: boolean;
+}> = ({ player, isEditing }) => {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id: player.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center justify-between p-3 rounded border bg-white"
+    >
+      <div className="flex items-center gap-3">
+        {isEditing && (
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing"
+          >
+            <GripVertical className="h-4 w-4 text-gray-400" />
+          </div>
+        )}
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
+          {player.battingPosition}
+        </div>
+        <span className="font-medium">
+          {player.teamMember?.user?.name || "Unknown Player"}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        {(() => {
+          const isPitcher = player.teamMember?.role
+            .split(",")
+            .map((role) => role.trim().toLowerCase())
+            .includes("pitcher");
+
+          return (
+            <>
+              {isPitcher && <Badge variant="default">Pitcher</Badge>}
+              <Badge variant="outline">
+                {player.teamMember?.gender === "M" ? "Male" : "Female"}
+              </Badge>
+            </>
+          );
+        })()}
+      </div>
+    </div>
+  );
+};
+
 const LineupPage: React.FC = () => {
   const { teamId } = useParams<{ teamId: string }>();
   const { currentTeam } = useTeamContext();
@@ -35,9 +110,22 @@ const LineupPage: React.FC = () => {
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [battingOrder, setBattingOrder] = useState<BattingOrder[]>([]);
   const [fieldingLineup, setFieldingLineup] = useState<FieldingLineup[]>([]);
+  const [editableBattingOrder, setEditableBattingOrder] = useState<
+    BattingOrder[]
+  >([]);
+  const [editableFieldingLineup, setEditableFieldingLineup] = useState<
+    FieldingLineup[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [editingBattingOrder, setEditingBattingOrder] = useState(false);
   const [editingFieldingLineup, setEditingFieldingLineup] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   React.useEffect(() => {
     if (teamId) {
@@ -106,6 +194,8 @@ const LineupPage: React.FC = () => {
 
       setBattingOrder(batting);
       setFieldingLineup(fielding);
+      setEditableBattingOrder(batting);
+      setEditableFieldingLineup(fielding);
     } catch (error) {
       toast({
         title: "Error",
@@ -115,6 +205,17 @@ const LineupPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const editableFieldingByInning = () => {
+    const grouped: Record<number, FieldingLineup[]> = {};
+    editableFieldingLineup.forEach((player) => {
+      if (!grouped[player.inning]) {
+        grouped[player.inning] = [];
+      }
+      grouped[player.inning].push(player);
+    });
+    return grouped;
   };
 
   const groupFieldingByInning = () => {
@@ -201,6 +302,85 @@ const LineupPage: React.FC = () => {
     return "bg-gray-500";
   };
 
+  const handleBattingDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      setEditableBattingOrder((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over?.id);
+
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+        // Update batting positions
+        return newOrder.map((player, index) => ({
+          ...player,
+          battingPosition: index + 1,
+        }));
+      });
+    }
+  };
+
+  const startEditingBattingOrder = () => {
+    setEditingBattingOrder(true);
+    setEditableBattingOrder([...battingOrder]);
+  };
+
+  const saveBattingOrder = () => {
+    setBattingOrder([...editableBattingOrder]);
+    setEditingBattingOrder(false);
+    toast({
+      title: "Success",
+      description: "Batting order updated successfully",
+    });
+    // TODO: Add API call to save to backend
+  };
+
+  const cancelEditingBattingOrder = () => {
+    setEditableBattingOrder([...battingOrder]);
+    setEditingBattingOrder(false);
+  };
+
+  const startEditingFieldingLineup = () => {
+    setEditingFieldingLineup(true);
+    setEditableFieldingLineup([...fieldingLineup]);
+  };
+
+  const saveFieldingLineup = () => {
+    setFieldingLineup([...editableFieldingLineup]);
+    setEditingFieldingLineup(false);
+    toast({
+      title: "Success",
+      description: "Fielding positions updated successfully",
+    });
+    // TODO: Add API call to save to backend
+  };
+
+  const cancelEditingFieldingLineup = () => {
+    setEditableFieldingLineup([...fieldingLineup]);
+    setEditingFieldingLineup(false);
+  };
+
+  const updatePlayerPosition = (playerId: string, newPosition: string) => {
+    setEditableFieldingLineup((players) =>
+      players.map((player) =>
+        player.id === playerId ? { ...player, position: newPosition } : player
+      )
+    );
+  };
+
+  const positions = [
+    "Pitcher",
+    "C",
+    "1B",
+    "2B",
+    "3B",
+    "SS",
+    "LF",
+    "CF",
+    "RF",
+    "Rover",
+  ];
+
   if (!teamId || !currentTeam) {
     return <div>Loading...</div>;
   }
@@ -277,20 +457,35 @@ const LineupPage: React.FC = () => {
               <TabsContent value="batting" className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-semibold">Batting Order</h3>
-                  <Button
-                    onClick={() => setEditingBattingOrder(!editingBattingOrder)}
-                    variant={editingBattingOrder ? "default" : "outline"}
-                    size="sm"
-                  >
-                    {editingBattingOrder ? (
-                      <>
-                        <Save className="h-4 w-4 mr-2" />
-                        Save Changes
-                      </>
-                    ) : (
-                      "Edit Order"
+                  <div className="flex gap-2">
+                    {editingBattingOrder && (
+                      <Button
+                        onClick={cancelEditingBattingOrder}
+                        variant="outline"
+                        size="sm"
+                      >
+                        Cancel
+                      </Button>
                     )}
-                  </Button>
+                    <Button
+                      onClick={
+                        editingBattingOrder
+                          ? saveBattingOrder
+                          : startEditingBattingOrder
+                      }
+                      variant={editingBattingOrder ? "default" : "outline"}
+                      size="sm"
+                    >
+                      {editingBattingOrder ? (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Save Changes
+                        </>
+                      ) : (
+                        "Edit Order"
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 {battingOrder.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
@@ -298,42 +493,64 @@ const LineupPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {battingOrder.map((player) => (
-                      <div
-                        key={player.id}
-                        className="flex items-center justify-between p-3 rounded border"
+                    {editingBattingOrder ? (
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleBattingDragEnd}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
-                            {player.battingPosition}
+                        <SortableContext
+                          items={editableBattingOrder}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          {editableBattingOrder.map((player) => (
+                            <SortableBattingPlayer
+                              key={player.id}
+                              player={player}
+                              isEditing={editingBattingOrder}
+                            />
+                          ))}
+                        </SortableContext>
+                      </DndContext>
+                    ) : (
+                      battingOrder.map((player) => (
+                        <div
+                          key={player.id}
+                          className="flex items-center justify-between p-3 rounded border"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
+                              {player.battingPosition}
+                            </div>
+                            <span className="font-medium">
+                              {player.teamMember?.user?.name ||
+                                "Unknown Player"}
+                            </span>
                           </div>
-                          <span className="font-medium">
-                            {player.teamMember?.user?.name || "Unknown Player"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {(() => {
-                            const isPitcher = player.teamMember?.role
-                              .split(",")
-                              .map((role) => role.trim().toLowerCase())
-                              .includes("pitcher");
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const isPitcher = player.teamMember?.role
+                                .split(",")
+                                .map((role) => role.trim().toLowerCase())
+                                .includes("pitcher");
 
-                            return (
-                              <>
-                                {isPitcher && (
-                                  <Badge variant="default">Pitcher</Badge>
-                                )}
-                                <Badge variant="outline">
-                                  {player.teamMember?.gender === "M"
-                                    ? "Male"
-                                    : "Female"}
-                                </Badge>
-                              </>
-                            );
-                          })()}
+                              return (
+                                <>
+                                  {isPitcher && (
+                                    <Badge variant="default">Pitcher</Badge>
+                                  )}
+                                  <Badge variant="outline">
+                                    {player.teamMember?.gender === "M"
+                                      ? "Male"
+                                      : "Female"}
+                                  </Badge>
+                                </>
+                              );
+                            })()}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 )}
               </TabsContent>
@@ -341,22 +558,35 @@ const LineupPage: React.FC = () => {
               <TabsContent value="fielding" className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-semibold">Fielding Positions</h3>
-                  <Button
-                    onClick={() =>
-                      setEditingFieldingLineup(!editingFieldingLineup)
-                    }
-                    variant={editingFieldingLineup ? "default" : "outline"}
-                    size="sm"
-                  >
-                    {editingFieldingLineup ? (
-                      <>
-                        <Save className="h-4 w-4 mr-2" />
-                        Save Changes
-                      </>
-                    ) : (
-                      "Edit Positions"
+                  <div className="flex gap-2">
+                    {editingFieldingLineup && (
+                      <Button
+                        onClick={cancelEditingFieldingLineup}
+                        variant="outline"
+                        size="sm"
+                      >
+                        Cancel
+                      </Button>
                     )}
-                  </Button>
+                    <Button
+                      onClick={
+                        editingFieldingLineup
+                          ? saveFieldingLineup
+                          : startEditingFieldingLineup
+                      }
+                      variant={editingFieldingLineup ? "default" : "outline"}
+                      size="sm"
+                    >
+                      {editingFieldingLineup ? (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Save Changes
+                        </>
+                      ) : (
+                        "Edit Positions"
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 {Object.keys(fieldingByInning).length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
@@ -364,7 +594,11 @@ const LineupPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {Object.entries(fieldingByInning)
+                    {Object.entries(
+                      editingFieldingLineup
+                        ? editableFieldingByInning()
+                        : fieldingByInning
+                    )
                       .sort(([a], [b]) => parseInt(a) - parseInt(b))
                       .map(([inning, players]) => (
                         <div key={inning} className="space-y-2">
@@ -375,13 +609,38 @@ const LineupPage: React.FC = () => {
                             {players.map((player) => (
                               <div
                                 key={player.id}
-                                className="flex items-center gap-2 p-2 rounded border"
+                                className="flex items-center gap-2 p-2 rounded border bg-white"
                               >
-                                <Badge
-                                  className={getPositionColor(player.position)}
-                                >
-                                  {player.position}
-                                </Badge>
+                                {editingFieldingLineup ? (
+                                  <Select
+                                    value={player.position}
+                                    onValueChange={(value) =>
+                                      updatePlayerPosition(player.id, value)
+                                    }
+                                  >
+                                    <SelectTrigger className="w-20">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {positions.map((position) => (
+                                        <SelectItem
+                                          key={position}
+                                          value={position}
+                                        >
+                                          {position}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <Badge
+                                    className={getPositionColor(
+                                      player.position
+                                    )}
+                                  >
+                                    {player.position}
+                                  </Badge>
+                                )}
                                 <span className="text-sm font-medium">
                                   {player.teamMember?.user?.name || "Unknown"}
                                 </span>

@@ -378,13 +378,6 @@ func GenerateCompleteFieldingLineup(gameID uuid.UUID) ([]models.FieldingLineup, 
 		return nil, result.Error
 	}
 
-	// Debug: Print attendance details
-	fmt.Printf("Found %d attendees with 'going' status\n", len(attendance))
-	for _, att := range attendance {
-		fmt.Printf("Player: %s, Gender: %s, Active: %v\n", 
-			att.TeamMember.User.Name, att.TeamMember.Gender, att.TeamMember.IsActive)
-	}
-
 	if len(attendance) < 9 {
 		return nil, errors.New("insufficient players: need at least 9 confirmed")
 	}
@@ -397,9 +390,6 @@ func GenerateCompleteFieldingLineup(gameID uuid.UUID) ([]models.FieldingLineup, 
 	// 2. Separate by gender
 	males := filterByGender(confirmed, "M")
 	females := filterByGender(confirmed, "F")
-
-	// Debug: Print gender breakdown
-	fmt.Printf("Gender breakdown: %d males, %d females\n", len(males), len(females))
 
 	// 3. Check if we have enough for 5-4 split
 	if len(males) < 4 || len(females) < 4 {
@@ -427,26 +417,6 @@ func GenerateCompleteFieldingLineup(gameID uuid.UUID) ([]models.FieldingLineup, 
 			return nil, err
 		}
 		allLineups = append(allLineups, lineup...)
-		
-		// Add bench assignments for players not in this inning's lineup
-		assignedPlayerIDs := make(map[uuid.UUID]bool)
-		for _, assignment := range lineup {
-			assignedPlayerIDs[assignment.TeamMemberID] = true
-		}
-		
-		// Assign remaining players to bench for this inning
-		for _, member := range confirmed {
-			if !assignedPlayerIDs[member.ID] {
-				benchAssignment := models.FieldingLineup{
-					GameID:       gameID,
-					TeamMemberID: member.ID,
-					Position:     "Bench",
-					Inning:       inning,
-					IsGenerated:  true,
-				}
-				allLineups = append(allLineups, benchAssignment)
-			}
-		}
 	}
 
 	return allLineups, nil
@@ -578,8 +548,6 @@ func generateBalancedInningLineup(gameID uuid.UUID, inning int, confirmed []mode
 	
 	for _, member := range confirmed {
 		if !selectedIDs[member.ID] {
-			// Only update LastSatOutInning for players who actually sat out
-			// Don't count bench as sitting out if they were assigned to bench position
 			playerTracks[member.ID].LastSatOutInning = inning
 		}
 	}
@@ -592,9 +560,11 @@ func selectBalancedTeam(sortedPlayers []models.TeamMember, playerTracks map[uuid
 	males := make([]models.TeamMember, 0)
 	females := make([]models.TeamMember, 0)
 
-	// Separate by gender - don't filter out players who've already played 6+ innings
-	// since we're generating a complete new lineup and want fair rotation
+	// Separate by gender and filter out players who've already played 6+ innings
 	for _, member := range sortedPlayers {
+		if playerTracks[member.ID].InningsPlayed >= 6 {
+			continue
+		}
 		if member.Gender == "M" {
 			males = append(males, member)
 		} else if member.Gender == "F" {
@@ -603,7 +573,6 @@ func selectBalancedTeam(sortedPlayers []models.TeamMember, playerTracks map[uuid
 	}
 
 	// Debug: print counts
-	fmt.Printf("Available for selection: %d males, %d females\n", len(males), len(females))
 	if len(males) < 5 && len(females) < 5 {
 		return nil, errors.New(fmt.Sprintf("cannot achieve 5-4 split: %d males, %d females available", len(males), len(females)))
 	}

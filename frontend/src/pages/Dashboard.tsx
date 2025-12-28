@@ -17,6 +17,7 @@ import {
   type TeamMemberPreference,
 } from "../api/members";
 import { getAttendance, updateAttendance, type Attendance } from "../api/games";
+import { utcToLocalDate, getTodayAtMidnight } from "../utils/dateUtils";
 
 interface Game {
   id: string;
@@ -42,24 +43,12 @@ export default function Dashboard() {
     if (currentTeam?.id) {
       getTeamGames(currentTeam.id)
         .then((games: Game[]) => {
-          const now = new Date();
-          // Reset time to start of day for comparison to include games today
-          now.setHours(0, 0, 0, 0);
-
+          const now = getTodayAtMidnight();
           const nextWeek = new Date(now);
           nextWeek.setDate(now.getDate() + 7);
 
           const filtered = games.filter((g: Game) => {
-            // Parse the date string as UTC components to construct a specific calendar date in local time
-            // g.date comes as "2025-12-25T00:00:00Z" (UTC midnight).
-            // new Date(g.date) shifts it to local time (e.g. Dec 24 4pm).
-            // We want "Dec 25" regardless of where the user is.
-            const utcDate = new Date(g.date);
-            const gameDate = new Date(
-              utcDate.getUTCFullYear(),
-              utcDate.getUTCMonth(),
-              utcDate.getUTCDate()
-            );
+            const gameDate = utcToLocalDate(g.date);
 
             return (
               gameDate >= now &&
@@ -317,13 +306,7 @@ export default function Dashboard() {
               {upcomingGames.length > 0 ? (
                 <div className="space-y-4">
                   {upcomingGames.map((game: Game) => {
-                    const d = new Date(game.date);
-                    // Force local date interpretation
-                    const localDate = new Date(
-                      d.getUTCFullYear(),
-                      d.getUTCMonth(),
-                      d.getUTCDate()
-                    );
+                    const localDate = utcToLocalDate(game.date);
 
                     return (
                       <div

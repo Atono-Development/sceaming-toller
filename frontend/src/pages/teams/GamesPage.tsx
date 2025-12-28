@@ -18,6 +18,7 @@ import {
 } from "../../api/games";
 import { useAuth } from "../../contexts/AuthContext";
 import { useState, useEffect } from "react";
+import { utcToLocalDate, getTodayAtMidnight } from "../../utils/dateUtils";
 
 export function GamesPage() {
   const { teamId } = useParams();
@@ -77,17 +78,11 @@ export function GamesPage() {
   if (isLoading) return <div>Loading schedule...</div>;
 
   // Sort games: upcoming first, then past
-  const now = new Date();
-  now.setHours(0, 0, 0, 0); // Reset to start of day for comparison
+  const now = getTodayAtMidnight();
 
   const upcomingGames = games
     ?.filter((game: any) => {
-      const gameDate = new Date(game.date);
-      const localGameDate = new Date(
-        gameDate.getUTCFullYear(),
-        gameDate.getUTCMonth(),
-        gameDate.getUTCDate()
-      );
+      const localGameDate = utcToLocalDate(game.date);
       return localGameDate >= now;
     })
     .sort(
@@ -97,12 +92,7 @@ export function GamesPage() {
 
   const pastGames = games
     ?.filter((game: any) => {
-      const gameDate = new Date(game.date);
-      const localGameDate = new Date(
-        gameDate.getUTCFullYear(),
-        gameDate.getUTCMonth(),
-        gameDate.getUTCDate()
-      );
+      const localGameDate = utcToLocalDate(game.date);
       return localGameDate < now;
     })
     .sort(
@@ -138,16 +128,8 @@ export function GamesPage() {
                     vs {game.opposingTeam}
                   </CardTitle>
                   <div className="text-sm font-medium text-muted-foreground">
-                    {(() => {
-                      const d = new Date(game.date);
-                      const localDate = new Date(
-                        d.getUTCFullYear(),
-                        d.getUTCMonth(),
-                        d.getUTCDate()
-                      );
-                      return format(localDate, "MMM d, yyyy");
-                    })()}{" "}
-                    • {game.time}
+                    {format(utcToLocalDate(game.date), "MMM d, yyyy")} •{" "}
+                    {game.time}
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -235,16 +217,8 @@ export function GamesPage() {
                     vs {game.opposingTeam}
                   </CardTitle>
                   <div className="text-sm font-medium text-muted-foreground">
-                    {(() => {
-                      const d = new Date(game.date);
-                      const localDate = new Date(
-                        d.getUTCFullYear(),
-                        d.getUTCMonth(),
-                        d.getUTCDate()
-                      );
-                      return format(localDate, "MMM d, yyyy");
-                    })()}{" "}
-                    • {game.time}
+                    {format(utcToLocalDate(game.date), "MMM d, yyyy")} •{" "}
+                    {game.time}
                   </div>
                 </CardHeader>
                 <CardContent>

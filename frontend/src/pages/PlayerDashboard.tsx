@@ -13,6 +13,11 @@ import { getTeamGames, type Game } from "../api/games";
 import { useAuth } from "../contexts/AuthContext";
 import { useTeamContext } from "../contexts/TeamContext";
 import { useToast } from "../hooks/use-toast";
+import {
+  utcToLocalDate,
+  getTodayAtMidnight,
+  isGameInPast as isGameInPastUtil,
+} from "../utils/dateUtils";
 
 const PlayerDashboard: React.FC = () => {
   const [games, setGames] = useState<Game[]>([]);
@@ -41,16 +46,10 @@ const PlayerDashboard: React.FC = () => {
       setGames(data);
 
       // Select the next upcoming game by default
-      const now = new Date();
-      now.setHours(0, 0, 0, 0); // Reset to start of day for comparison
+      const now = getTodayAtMidnight();
 
       const upcomingGames = data.filter((game) => {
-        const gameDate = new Date(game.date);
-        const localGameDate = new Date(
-          gameDate.getUTCFullYear(),
-          gameDate.getUTCMonth(),
-          gameDate.getUTCDate()
-        );
+        const localGameDate = utcToLocalDate(game.date);
         return localGameDate >= now && game.status === "scheduled";
       });
 
@@ -71,12 +70,7 @@ const PlayerDashboard: React.FC = () => {
   };
 
   const formatGameDate = (dateString: string) => {
-    const d = new Date(dateString);
-    const localDate = new Date(
-      d.getUTCFullYear(),
-      d.getUTCMonth(),
-      d.getUTCDate()
-    );
+    const localDate = utcToLocalDate(dateString);
     return localDate.toLocaleDateString("en-US", {
       weekday: "short",
       month: "short",
@@ -85,17 +79,7 @@ const PlayerDashboard: React.FC = () => {
   };
 
   const isGameInPast = (game: Game) => {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0); // Reset to start of day for comparison
-
-    const gameDate = new Date(game.date);
-    const localGameDate = new Date(
-      gameDate.getUTCFullYear(),
-      gameDate.getUTCMonth(),
-      gameDate.getUTCDate()
-    );
-
-    return localGameDate < now;
+    return isGameInPastUtil(game.date);
   };
 
   const getGameStatusColor = (status: string) => {
@@ -151,17 +135,11 @@ const PlayerDashboard: React.FC = () => {
                 </div>
               ) : (
                 (() => {
-                  const now = new Date();
-                  now.setHours(0, 0, 0, 0);
+                  const now = getTodayAtMidnight();
 
                   const upcomingGames = games
                     .filter((game: Game) => {
-                      const d = new Date(game.date);
-                      const localGameDate = new Date(
-                        d.getUTCFullYear(),
-                        d.getUTCMonth(),
-                        d.getUTCDate()
-                      );
+                      const localGameDate = utcToLocalDate(game.date);
                       return localGameDate >= now;
                     })
                     .sort(
@@ -171,12 +149,7 @@ const PlayerDashboard: React.FC = () => {
 
                   const pastGames = games
                     .filter((game: Game) => {
-                      const d = new Date(game.date);
-                      const localGameDate = new Date(
-                        d.getUTCFullYear(),
-                        d.getUTCMonth(),
-                        d.getUTCDate()
-                      );
+                      const localGameDate = utcToLocalDate(game.date);
                       return localGameDate < now;
                     })
                     .sort(

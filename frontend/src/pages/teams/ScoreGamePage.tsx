@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -57,8 +57,8 @@ export function ScoreGamePage() {
   const scoreForm = useForm<z.infer<typeof scoreFormSchema>>({
     resolver: zodResolver(scoreFormSchema),
     defaultValues: {
-      finalScore: game?.finalScore?.toString() || "",
-      opponentScore: game?.opponentScore?.toString() || "",
+      finalScore: "",
+      opponentScore: "",
     },
   });
 
@@ -72,12 +72,14 @@ export function ScoreGamePage() {
   });
 
   // Update form when game data is loaded
-  if (game && scoreForm.getValues().finalScore === "") {
-    scoreForm.reset({
-      finalScore: game.finalScore?.toString() || "",
-      opponentScore: game.opponentScore?.toString() || "",
-    });
-  }
+  useEffect(() => {
+    if (game) {
+      scoreForm.reset({
+        finalScore: game.finalScore?.toString() || "",
+        opponentScore: game.opponentScore?.toString() || "",
+      });
+    }
+  }, [game, scoreForm]);
 
   const updateScoreMutation = useMutation({
     mutationFn: (values: { finalScore: number; opponentScore: number }) =>

@@ -92,6 +92,7 @@ export function RosterPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
+              <TableHead>Gender</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
               {isAdmin && <TableHead>Position Preferences</TableHead>}
@@ -109,6 +110,18 @@ export function RosterPage() {
                 <TableRow key={member.id}>
                   <TableCell className="font-medium">
                     {member.user?.name}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={member.gender === "M" ? "default" : "secondary"}
+                      className="text-xs"
+                    >
+                      {member.gender === "M"
+                        ? "M"
+                        : member.gender === "F"
+                        ? "F"
+                        : "Not Set"}
+                    </Badge>
                   </TableCell>
                   <TableCell>{member.user?.email}</TableCell>
                   <TableCell>

@@ -262,3 +262,46 @@ func UpdateMyPitcherStatus(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
 }
+
+func UpdateMyGender(w http.ResponseWriter, r *http.Request) {
+	teamIDStr := chi.URLParam(r, "teamID")
+	teamID, err := uuid.Parse(teamIDStr)
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+
+	userID := r.Context().Value("userID").(uuid.UUID)
+
+	// Find the team member for this user and team
+	var teamMember models.TeamMember
+	if result := database.DB.Where("team_id = ? AND user_id = ? AND is_active = ?", teamID, userID, true).First(&teamMember); result.Error != nil {
+		http.Error(w, "Team member not found", http.StatusNotFound)
+		return
+	}
+
+	var req struct {
+		Gender string `json:"gender"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate gender value
+	if req.Gender != "M" && req.Gender != "F" {
+		http.Error(w, "Gender must be 'M' or 'F'", http.StatusBadRequest)
+		return
+	}
+
+	// Update the gender
+	teamMember.Gender = req.Gender
+
+	if result := database.DB.Save(&teamMember); result.Error != nil {
+		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}

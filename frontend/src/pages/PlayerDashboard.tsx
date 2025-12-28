@@ -41,10 +41,18 @@ const PlayerDashboard: React.FC = () => {
       setGames(data);
 
       // Select the next upcoming game by default
-      const upcomingGames = data.filter(
-        (game) =>
-          new Date(game.date) >= new Date() && game.status === "scheduled"
-      );
+      const now = new Date();
+      now.setHours(0, 0, 0, 0); // Reset to start of day for comparison
+
+      const upcomingGames = data.filter((game) => {
+        const gameDate = new Date(game.date);
+        const localGameDate = new Date(
+          gameDate.getUTCFullYear(),
+          gameDate.getUTCMonth(),
+          gameDate.getUTCDate()
+        );
+        return localGameDate >= now && game.status === "scheduled";
+      });
 
       if (upcomingGames.length > 0) {
         setSelectedGame(upcomingGames[0]);
@@ -63,7 +71,13 @@ const PlayerDashboard: React.FC = () => {
   };
 
   const formatGameDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    const d = new Date(dateString);
+    const localDate = new Date(
+      d.getUTCFullYear(),
+      d.getUTCMonth(),
+      d.getUTCDate()
+    );
+    return localDate.toLocaleDateString("en-US", {
       weekday: "short",
       month: "short",
       day: "numeric",
@@ -71,7 +85,17 @@ const PlayerDashboard: React.FC = () => {
   };
 
   const isGameInPast = (game: Game) => {
-    return new Date(game.date) < new Date();
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Reset to start of day for comparison
+
+    const gameDate = new Date(game.date);
+    const localGameDate = new Date(
+      gameDate.getUTCFullYear(),
+      gameDate.getUTCMonth(),
+      gameDate.getUTCDate()
+    );
+
+    return localGameDate < now;
   };
 
   const getGameStatusColor = (status: string) => {
@@ -126,35 +150,122 @@ const PlayerDashboard: React.FC = () => {
                   No games scheduled for this team.
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {games.map((game) => (
-                    <div
-                      key={game.id}
-                      className={`flex items-center justify-between p-3 rounded border cursor-pointer transition-colors hover:bg-muted/50 ${
-                        selectedGame?.id === game.id ? "bg-muted" : ""
-                      }`}
-                      onClick={() => setSelectedGame(game)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-3 h-3 rounded-full ${getGameStatusColor(
-                            game.status
-                          )}`}
-                        ></div>
-                        <div>
-                          <div className="font-medium">{game.opposingTeam}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {formatGameDate(game.date)} at {game.time} •{" "}
-                            {game.location}
+                (() => {
+                  const now = new Date();
+                  now.setHours(0, 0, 0, 0);
+
+                  const upcomingGames = games
+                    .filter((game: Game) => {
+                      const d = new Date(game.date);
+                      const localGameDate = new Date(
+                        d.getUTCFullYear(),
+                        d.getUTCMonth(),
+                        d.getUTCDate()
+                      );
+                      return localGameDate >= now;
+                    })
+                    .sort(
+                      (a, b) =>
+                        new Date(a.date).getTime() - new Date(b.date).getTime()
+                    );
+
+                  const pastGames = games
+                    .filter((game: Game) => {
+                      const d = new Date(game.date);
+                      const localGameDate = new Date(
+                        d.getUTCFullYear(),
+                        d.getUTCMonth(),
+                        d.getUTCDate()
+                      );
+                      return localGameDate < now;
+                    })
+                    .sort(
+                      (a, b) =>
+                        new Date(b.date).getTime() - new Date(a.date).getTime()
+                    );
+
+                  return (
+                    <div className="space-y-4">
+                      {upcomingGames.length > 0 && (
+                        <>
+                          <div className="text-lg font-semibold text-slate-700">
+                            Upcoming Games
                           </div>
-                        </div>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {isGameInPast(game) ? "Past" : "Upcoming"}
-                      </div>
+                          <div className="space-y-2">
+                            {upcomingGames.map((game) => (
+                              <div
+                                key={game.id}
+                                className={`flex items-center justify-between p-3 rounded border cursor-pointer transition-colors hover:bg-muted/50 ${
+                                  selectedGame?.id === game.id ? "bg-muted" : ""
+                                }`}
+                                onClick={() => setSelectedGame(game)}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className={`w-3 h-3 rounded-full ${getGameStatusColor(
+                                      game.status
+                                    )}`}
+                                  ></div>
+                                  <div>
+                                    <div className="font-medium">
+                                      {game.opposingTeam}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {formatGameDate(game.date)} at {game.time}{" "}
+                                      • {game.location}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-sm font-medium text-blue-600">
+                                  Upcoming
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+
+                      {pastGames.length > 0 && (
+                        <>
+                          <div className="text-lg font-semibold text-slate-500 mt-6">
+                            Past Games
+                          </div>
+                          <div className="space-y-2">
+                            {pastGames.map((game) => (
+                              <div
+                                key={game.id}
+                                className={`flex items-center justify-between p-3 rounded border cursor-pointer transition-colors hover:bg-muted/50 opacity-75 ${
+                                  selectedGame?.id === game.id ? "bg-muted" : ""
+                                }`}
+                                onClick={() => setSelectedGame(game)}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className={`w-3 h-3 rounded-full ${getGameStatusColor(
+                                      game.status
+                                    )}`}
+                                  ></div>
+                                  <div>
+                                    <div className="font-medium">
+                                      {game.opposingTeam}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {formatGameDate(game.date)} at {game.time}{" "}
+                                      • {game.location}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  Past
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()
               )}
             </CardContent>
           </Card>

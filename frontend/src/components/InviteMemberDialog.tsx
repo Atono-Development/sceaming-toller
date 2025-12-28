@@ -37,11 +37,13 @@ export function InviteMemberDialog() {
   const queryClient = useQueryClient();
   const [inviteLink, setInviteLink] = useState<string | null>(null);
 
-  const { register, handleSubmit, setValue, reset } = useForm<InviteMemberForm>({
-    defaultValues: {
-      role: "player",
-    },
-  });
+  const { register, handleSubmit, setValue, reset } = useForm<InviteMemberForm>(
+    {
+      defaultValues: {
+        role: "player",
+      },
+    }
+  );
 
   const mutation = useMutation({
     mutationFn: (data: InviteMemberForm) => {
@@ -49,7 +51,9 @@ export function InviteMemberDialog() {
       return inviteMember(currentTeam.id, data.email, data.role);
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["teamMembers", currentTeam?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["teamMembers", currentTeam?.id],
+      });
       // Generate invite link
       const link = `${window.location.origin}/invitations/${data.token}`;
       setInviteLink(link);
@@ -58,11 +62,12 @@ export function InviteMemberDialog() {
         description: "Share the link with the player to join.",
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: string } };
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.response?.data || "Failed to invite member",
+        description: err.response?.data || "Failed to invite member",
       });
     },
   });
@@ -136,7 +141,9 @@ export function InviteMemberDialog() {
             </div>
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {mutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
                 Create Invite
               </Button>
             </DialogFooter>
@@ -148,13 +155,14 @@ export function InviteMemberDialog() {
                 <Label htmlFor="link" className="sr-only">
                   Link
                 </Label>
-                <Input
-                  id="link"
-                  defaultValue={inviteLink}
-                  readOnly
-                />
+                <Input id="link" defaultValue={inviteLink} readOnly />
               </div>
-              <Button type="button" size="sm" className="px-3" onClick={copyToClipboard}>
+              <Button
+                type="button"
+                size="sm"
+                className="px-3"
+                onClick={copyToClipboard}
+              >
                 <span className="sr-only">Copy</span>
                 <Copy className="h-4 w-4" />
               </Button>
@@ -163,7 +171,11 @@ export function InviteMemberDialog() {
               Send this link to the player. It will expire in 7 days.
             </p>
             <DialogFooter>
-               <Button type="button" variant="secondary" onClick={() => handleOpenChange(false)}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => handleOpenChange(false)}
+              >
                 Close
               </Button>
             </DialogFooter>

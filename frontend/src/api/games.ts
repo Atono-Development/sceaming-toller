@@ -101,6 +101,16 @@ export const getFieldingLineup = async (teamId: string, gameId: string) => {
   return response.data;
 };
 
+export const generateCompleteFieldingLineup = async (
+  teamId: string,
+  gameId: string
+) => {
+  const response = await api.post<FieldingLineup[]>(
+    `/teams/${teamId}/games/${gameId}/fielding/generate-complete`
+  );
+  return response.data;
+};
+
 export const updateGame = async (
   teamId: string,
   gameId: string,

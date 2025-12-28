@@ -65,39 +65,48 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (currentTeam?.id) {
-      setLoadingPreferences(true);
-      Promise.all([
-        getMyPreferences(currentTeam.id),
-        getMyTeamMemberInfo(currentTeam.id),
-      ])
-        .then(([preferencesData, memberInfo]) => {
+      const loadPreferences = async () => {
+        setLoadingPreferences(true);
+        try {
+          const [preferencesData, memberInfo] = await Promise.all([
+            getMyPreferences(currentTeam.id),
+            getMyTeamMemberInfo(currentTeam.id),
+          ]);
           setPreferences(preferencesData);
           setIsPitcher(memberInfo.role.includes("pitcher"));
-        })
-        .catch((err: unknown) =>
-          console.error("Failed to fetch preferences:", err)
-        )
-        .finally(() => setLoadingPreferences(false));
+        } catch (err: unknown) {
+          console.error("Failed to fetch preferences:", err);
+        } finally {
+          setLoadingPreferences(false);
+        }
+      };
+      loadPreferences();
     }
   }, [currentTeam]);
 
   useEffect(() => {
     if (currentTeam?.id && upcomingGames.length > 0) {
-      const nextGame = upcomingGames[0];
-      setLoadingAttendance(true);
-      getAttendance(currentTeam.id, nextGame.id)
-        .then((attendanceData) => {
+      const loadAttendance = async () => {
+        const nextGame = upcomingGames[0];
+        setLoadingAttendance(true);
+        try {
+          const attendanceData = await getAttendance(
+            currentTeam.id,
+            nextGame.id
+          );
           const myAttendance = attendanceData.find(
-            (a) => a.teamMember?.user?.email === user?.email
+            (att: any) => att.teamMember?.user?.id === user?.id
           );
           setAttendance(myAttendance || null);
-        })
-        .catch((err: unknown) =>
-          console.error("Failed to fetch attendance:", err)
-        )
-        .finally(() => setLoadingAttendance(false));
+        } catch (err: unknown) {
+          console.error("Failed to fetch attendance:", err);
+        } finally {
+          setLoadingAttendance(false);
+        }
+      };
+      loadAttendance();
     }
-  }, [currentTeam, upcomingGames, user?.email]);
+  }, [currentTeam, upcomingGames, user?.id]);
 
   const handleAttendanceChange = (status: string) => {
     if (currentTeam?.id && upcomingGames.length > 0) {

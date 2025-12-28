@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Progress } from "./ui/progress";
+import { RefreshCw } from "lucide-react";
 import {
   getBattingOrder,
   getFieldingLineup,
+  generateCompleteFieldingLineup,
   type BattingOrder,
   type FieldingLineup,
   type Game,
@@ -22,11 +26,7 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadLineups();
-  }, [teamId, game.id]);
-
-  const loadLineups = async () => {
+  const loadLineups = useCallback(async () => {
     try {
       const [batting, fielding] = await Promise.all([
         getBattingOrder(teamId, game.id),
@@ -35,7 +35,7 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
 
       setBattingOrder(batting);
       setFieldingLineup(fielding);
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to load lineups",
@@ -44,7 +44,11 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [teamId, game.id, toast]);
+
+  useEffect(() => {
+    loadLineups();
+  }, [loadLineups]);
 
   const groupFieldingByInning = () => {
     const grouped: Record<number, FieldingLineup[]> = {};
@@ -55,6 +59,44 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
       grouped[player.inning].push(player);
     });
     return grouped;
+  };
+
+  const calculatePlayingTimeStats = () => {
+    const stats: Record<string, { innings: number; positions: string[] }> = {};
+
+    fieldingLineup.forEach((player) => {
+      const playerName = player.teamMember?.user?.name || "Unknown";
+      if (!stats[playerName]) {
+        stats[playerName] = { innings: 0, positions: [] };
+      }
+      stats[playerName].innings++;
+      if (!stats[playerName].positions.includes(player.position)) {
+        stats[playerName].positions.push(player.position);
+      }
+    });
+
+    return stats;
+  };
+
+  const generateAllInnings = async () => {
+    try {
+      setLoading(true);
+      await generateCompleteFieldingLineup(teamId, game.id);
+      await loadLineups();
+      toast({
+        title: "Success",
+        description:
+          "Generated complete 7-inning fielding lineup with balanced playing time",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to generate complete lineup",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getPositionColor = (position: string) => {
@@ -84,10 +126,21 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
         </div>
       </CardHeader>
       <CardContent>
+        <div className="mb-4">
+          <Button
+            onClick={generateAllInnings}
+            disabled={loading}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Generate All 7 Innings (Balanced)
+          </Button>
+        </div>
         <Tabs defaultValue="batting" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="batting">Batting Order</TabsTrigger>
             <TabsTrigger value="fielding">Fielding Positions</TabsTrigger>
+            <TabsTrigger value="stats">Playing Time</TabsTrigger>
           </TabsList>
 
           <TabsContent value="batting" className="space-y-4">
@@ -152,6 +205,39 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
                   ))}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="stats" className="space-y-4">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Playing Time Statistics</h3>
+              {Object.entries(calculatePlayingTimeStats())
+                .sort(([, a], [, b]) => b.innings - a.innings)
+                .map(([playerName, stats]) => {
+                  const percentage = (stats.innings / 7) * 100;
+                  return (
+                    <div key={playerName} className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">{playerName}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {stats.innings}/7 innings ({Math.round(percentage)}%)
+                        </span>
+                      </div>
+                      <Progress value={percentage} className="h-2" />
+                      <div className="flex flex-wrap gap-1">
+                        {stats.positions.map((position) => (
+                          <Badge
+                            key={position}
+                            variant="outline"
+                            className="text-xs"
+                          >
+                            {position}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
           </TabsContent>
         </Tabs>
       </CardContent>

@@ -584,6 +584,48 @@ func GenerateFieldingLineup(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(fieldingLineup)
 }
 
+func GenerateCompleteFieldingLineup(w http.ResponseWriter, r *http.Request) {
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamID"))
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+	gameID, err := uuid.Parse(chi.URLParam(r, "gameID"))
+	if err != nil {
+		http.Error(w, "Invalid game ID", http.StatusBadRequest)
+		return
+	}
+
+	// Verify game belongs to team
+	var game models.Game
+	if result := database.DB.Where("id = ? AND team_id = ?", gameID, teamID).First(&game); result.Error != nil {
+		http.Error(w, "Game not found", http.StatusNotFound)
+		return
+	}
+
+	// Delete existing fielding lineup for all innings of this game
+	if result := database.DB.Where("game_id = ?", gameID).Delete(&models.FieldingLineup{}); result.Error != nil {
+		http.Error(w, "Failed to clear existing fielding lineup", http.StatusInternalServerError)
+		return
+	}
+
+	// Generate new complete fielding lineup for all 7 innings
+	fieldingLineup, err := algorithms.GenerateCompleteFieldingLineup(gameID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Save to database
+	if result := database.DB.Create(&fieldingLineup); result.Error != nil {
+		http.Error(w, "Failed to save fielding lineup", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(fieldingLineup)
+}
+
 type UpdateFieldingLineupRequest struct {
 	FieldingLineup []models.FieldingLineup `json:"fieldingLineup"`
 }

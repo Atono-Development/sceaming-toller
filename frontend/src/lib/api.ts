@@ -22,7 +22,14 @@ api.interceptors.request.use(
 );
 
 // Game API
-export const createGame = async (teamId: string, gameData: any) => {
+export interface CreateGameData {
+  date: string;
+  time: string;
+  location: string;
+  opposingTeam: string;
+}
+
+export const createGame = async (teamId: string, gameData: CreateGameData) => {
   const response = await api.post(`/teams/${teamId}/games`, gameData);
   return response.data;
 };

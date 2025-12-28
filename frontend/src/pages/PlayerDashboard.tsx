@@ -13,11 +13,7 @@ import { getTeamGames, type Game } from "../api/games";
 import { useAuth } from "../contexts/AuthContext";
 import { useTeamContext } from "../contexts/TeamContext";
 import { useToast } from "../hooks/use-toast";
-import {
-  utcToLocalDate,
-  getTodayAtMidnight,
-  isGameInPast as isGameInPastUtil,
-} from "../utils/dateUtils";
+import { utcToLocalDate, getTodayAtMidnight } from "../utils/dateUtils";
 
 const PlayerDashboard: React.FC = () => {
   const [games, setGames] = useState<Game[]>([]);
@@ -58,7 +54,7 @@ const PlayerDashboard: React.FC = () => {
       } else if (data.length > 0) {
         setSelectedGame(data[0]);
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to load games",
@@ -76,10 +72,6 @@ const PlayerDashboard: React.FC = () => {
       month: "short",
       day: "numeric",
     });
-  };
-
-  const isGameInPast = (game: Game) => {
-    return isGameInPastUtil(game.date);
   };
 
   const getGameStatusColor = (status: string) => {

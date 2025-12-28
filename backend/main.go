@@ -86,6 +86,7 @@ func main() {
 				r.Delete("/games/{gameID}/batting-order", handlers.DeleteBattingOrder)
 				
 				r.Post("/games/{gameID}/fielding/generate", handlers.GenerateFieldingLineup)
+				r.Post("/games/{gameID}/fielding/generate-complete", handlers.GenerateCompleteFieldingLineup)
 				r.Put("/games/{gameID}/fielding", handlers.UpdateFieldingLineup)
 				r.Delete("/games/{gameID}/fielding", handlers.DeleteFieldingLineup)
 				

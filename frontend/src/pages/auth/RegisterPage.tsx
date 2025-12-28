@@ -1,10 +1,17 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { Label } from "../../components/ui/label";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -21,9 +28,14 @@ export default function RegisterPage() {
 
     try {
       await api.post("/auth/register", { name, email, password });
-      navigate("/login", { state: { message: "Registration successful! Please login." } });
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Registration failed. Please try again.");
+      navigate("/login", {
+        state: { message: "Registration successful! Please login." },
+      });
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      setError(
+        error.response?.data?.error || "Registration failed. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -33,7 +45,9 @@ export default function RegisterPage() {
     <div className="flex items-center justify-center min-h-screen bg-slate-50">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Register</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">
+            Register
+          </CardTitle>
           <CardDescription className="text-center">
             Create an account to manage your softball teams
           </CardDescription>
@@ -51,7 +65,9 @@ export default function RegisterPage() {
                 id="name"
                 placeholder="John Doe"
                 value={name}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setName(e.target.value)
+                }
                 required
               />
             </div>
@@ -62,7 +78,9 @@ export default function RegisterPage() {
                 type="email"
                 placeholder="name@example.com"
                 value={email}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setEmail(e.target.value)
+                }
                 required
               />
             </div>
@@ -72,7 +90,9 @@ export default function RegisterPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setPassword(e.target.value)
+                }
                 required
               />
             </div>

@@ -43,7 +43,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
       // Find current user's attendance (this would need user context in a real app)
       // For now, we'll just default to 'not_going'
       setMyAttendance("not_going");
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to load attendance",
@@ -67,7 +67,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
         title: "Success",
         description: "Attendance updated successfully",
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to update attendance",

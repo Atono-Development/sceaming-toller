@@ -3,6 +3,7 @@ package algorithms
 import (
 	"errors"
 	"math/rand"
+	"sort"
 	"strings"
 
 	"github.com/google/uuid"
@@ -280,4 +281,223 @@ func selectN(members []models.TeamMember, n int) []models.TeamMember {
 	})
 
 	return shuffled[:n]
+}
+
+// PlayerInningTrack tracks how many innings each player has played
+type PlayerInningTrack struct {
+	TeamMemberID uuid.UUID
+	InningsPlayed int
+	PositionsPlayed []string
+}
+
+// GenerateCompleteFieldingLineup creates fielding lineups for all 7 innings with even playing time
+func GenerateCompleteFieldingLineup(gameID uuid.UUID) ([]models.FieldingLineup, error) {
+	// 1. Get attendance for this game
+	var attendance []models.Attendance
+	if result := database.DB.Where("game_id = ? AND status = ?", gameID, "going").
+		Preload("TeamMember").
+		Preload("TeamMember.Preferences").
+		Find(&attendance); result.Error != nil {
+		return nil, result.Error
+	}
+
+	if len(attendance) < 9 {
+		return nil, errors.New("insufficient players: need at least 9 confirmed")
+	}
+
+	confirmed := make([]models.TeamMember, len(attendance))
+	for i, att := range attendance {
+		confirmed[i] = att.TeamMember
+	}
+
+	// 2. Separate by gender
+	males := filterByGender(confirmed, "M")
+	females := filterByGender(confirmed, "F")
+
+	// 3. Check if we have enough for 5-4 split
+	if len(males) < 4 || len(females) < 4 {
+		return nil, errors.New("need at least 4 males and 4 females for proper gender balance")
+	}
+
+	// 4. Initialize player tracking
+	playerTracks := make(map[uuid.UUID]*PlayerInningTrack)
+	for _, member := range confirmed {
+		playerTracks[member.ID] = &PlayerInningTrack{
+			TeamMemberID:   member.ID,
+			InningsPlayed:  0,
+			PositionsPlayed: make([]string, 0),
+		}
+	}
+
+	// 5. Generate lineups for all 7 innings
+	var allLineups []models.FieldingLineup
+	positions := []string{"C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "Rover"}
+
+	for inning := 1; inning <= 7; inning++ {
+		lineup, err := generateBalancedInningLineup(gameID, inning, confirmed, playerTracks, positions)
+		if err != nil {
+			return nil, err
+		}
+		allLineups = append(allLineups, lineup...)
+	}
+
+	return allLineups, nil
+}
+
+// generateBalancedInningLineup generates a single inning lineup trying to balance playing time
+func generateBalancedInningLineup(gameID uuid.UUID, inning int, confirmed []models.TeamMember, 
+	playerTracks map[uuid.UUID]*PlayerInningTrack, positions []string) ([]models.FieldingLineup, error) {
+	
+	// Sort players by innings played (ascending) to prioritize those who've played less
+	sortedPlayers := make([]models.TeamMember, len(confirmed))
+	copy(sortedPlayers, confirmed)
+	
+	sort.Slice(sortedPlayers, func(i, j int) bool {
+		inningsI := playerTracks[sortedPlayers[i].ID].InningsPlayed
+		inningsJ := playerTracks[sortedPlayers[j].ID].InningsPlayed
+		if inningsI != inningsJ {
+			return inningsI < inningsJ
+		}
+		// If equal innings, sort by name for consistency
+		return sortedPlayers[i].ID.String() < sortedPlayers[j].ID.String()
+	})
+
+	// Select 9 players with 5-4 gender balance, prioritizing those who've played less
+	selected, err := selectBalancedTeam(sortedPlayers, playerTracks)
+	if err != nil {
+		return nil, err
+	}
+
+	// Assign positions
+	assignments := make([]models.FieldingLineup, 0, 9)
+	assignedPlayers := make(map[uuid.UUID]bool)
+	assignedPositions := make(map[string]bool)
+
+	// First pass: assign based on preferences
+	for _, pos := range positions {
+		if assignedPositions[pos] {
+			continue
+		}
+
+		// Find the best player for this position who hasn't been assigned yet
+		var bestPlayer *models.TeamMember
+		bestPriority := 100 // high number
+
+		for i, member := range selected {
+			if assignedPlayers[member.ID] {
+				continue
+			}
+
+			// Check if this position is in member's preferences
+			prefRank := getPreferenceRank(member, pos)
+			if prefRank > 0 && prefRank < bestPriority {
+				// Also consider playing time balance
+				inningsPlayed := playerTracks[member.ID].InningsPlayed
+				if inningsPlayed < 6 { // Don't exceed 6 innings for any player
+					bestPlayer = &selected[i]
+					bestPriority = prefRank
+				}
+			}
+		}
+
+		if bestPlayer != nil {
+			assignments = append(assignments, models.FieldingLineup{
+				GameID:       gameID,
+				TeamMemberID: bestPlayer.ID,
+				Position:     pos,
+				Inning:       inning,
+				IsGenerated:  true,
+			})
+			assignedPlayers[bestPlayer.ID] = true
+			assignedPositions[pos] = true
+			
+			// Update player tracking
+			playerTracks[bestPlayer.ID].InningsPlayed++
+			playerTracks[bestPlayer.ID].PositionsPlayed = append(playerTracks[bestPlayer.ID].PositionsPlayed, pos)
+		}
+	}
+
+	// Second pass: fill remaining positions with players who've played least
+	for _, pos := range positions {
+		if assignedPositions[pos] {
+			continue
+		}
+
+		// Find player with least innings who hasn't been assigned
+		var bestPlayer *models.TeamMember
+		minInnings := 100
+
+		for i, member := range selected {
+			if assignedPlayers[member.ID] {
+				continue
+			}
+
+			inningsPlayed := playerTracks[member.ID].InningsPlayed
+			if inningsPlayed < minInnings && inningsPlayed < 6 {
+				minInnings = inningsPlayed
+				bestPlayer = &selected[i]
+			}
+		}
+
+		if bestPlayer != nil {
+			assignments = append(assignments, models.FieldingLineup{
+				GameID:       gameID,
+				TeamMemberID: bestPlayer.ID,
+				Position:     pos,
+				Inning:       inning,
+				IsGenerated:  true,
+			})
+			assignedPlayers[bestPlayer.ID] = true
+			assignedPositions[pos] = true
+			
+			// Update player tracking
+			playerTracks[bestPlayer.ID].InningsPlayed++
+			playerTracks[bestPlayer.ID].PositionsPlayed = append(playerTracks[bestPlayer.ID].PositionsPlayed, pos)
+		}
+	}
+
+	return assignments, nil
+}
+
+// selectBalancedTeam selects 9 players with 5-4 gender balance from available players
+func selectBalancedTeam(sortedPlayers []models.TeamMember, playerTracks map[uuid.UUID]*PlayerInningTrack) ([]models.TeamMember, error) {
+	males := make([]models.TeamMember, 0)
+	females := make([]models.TeamMember, 0)
+
+	// Separate by gender and filter out players who've already played 6+ innings
+	for _, member := range sortedPlayers {
+		if playerTracks[member.ID].InningsPlayed >= 6 {
+			continue
+		}
+		if member.Gender == "M" {
+			males = append(males, member)
+		} else if member.Gender == "F" {
+			females = append(females, member)
+		}
+	}
+
+	// Try different combinations for 5-4 split
+	var selected []models.TeamMember
+	
+	// Try 5 males, 4 females
+	if len(males) >= 5 && len(females) >= 4 {
+		selected = append(selectN(males, 5), selectN(females, 4)...)
+	} else if len(females) >= 5 && len(males) >= 4 {
+		// Try 5 females, 4 males
+		selected = append(selectN(females, 5), selectN(males, 4)...)
+	} else {
+		return nil, errors.New("cannot achieve 5-4 gender split with available players")
+	}
+
+	return selected, nil
+}
+
+// getPreferenceRank returns the preference rank (1, 2, 3) for a position, or 0 if not preferred
+func getPreferenceRank(member models.TeamMember, position string) int {
+	for _, pref := range member.Preferences {
+		if pref.Position == position {
+			return pref.PreferenceRank
+		}
+	}
+	return 0
 }

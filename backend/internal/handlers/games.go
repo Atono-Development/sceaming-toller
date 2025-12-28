@@ -209,3 +209,174 @@ func GetFieldingLineup(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(fieldingLineup)
 }
+
+type UpdateGameRequest struct {
+	Date         string `json:"date,omitempty"`
+	Time         string `json:"time,omitempty"`
+	Location     string `json:"location,omitempty"`
+	OpposingTeam string `json:"opposingTeam,omitempty"`
+}
+
+func UpdateGame(w http.ResponseWriter, r *http.Request) {
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamID"))
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+	gameID, err := uuid.Parse(chi.URLParam(r, "gameID"))
+	if err != nil {
+		http.Error(w, "Invalid game ID", http.StatusBadRequest)
+		return
+	}
+
+	var req UpdateGameRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	var game models.Game
+	if result := database.DB.Where("id = ? AND team_id = ?", gameID, teamID).First(&game); result.Error != nil {
+		http.Error(w, "Game not found", http.StatusNotFound)
+		return
+	}
+
+	updates := make(map[string]interface{})
+	if req.Date != "" {
+		if date, err := time.Parse("2006-01-02", req.Date); err == nil {
+			updates["date"] = date
+		} else {
+			http.Error(w, "Invalid date format. Use YYYY-MM-DD", http.StatusBadRequest)
+			return
+		}
+	}
+	if req.Time != "" {
+		updates["time"] = req.Time
+	}
+	if req.Location != "" {
+		updates["location"] = req.Location
+	}
+	if req.OpposingTeam != "" {
+		updates["opposing_team"] = req.OpposingTeam
+	}
+
+	if result := database.DB.Model(&game).Updates(updates); result.Error != nil {
+		http.Error(w, "Failed to update game", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(game)
+}
+
+func DeleteGame(w http.ResponseWriter, r *http.Request) {
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamID"))
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+	gameID, err := uuid.Parse(chi.URLParam(r, "gameID"))
+	if err != nil {
+		http.Error(w, "Invalid game ID", http.StatusBadRequest)
+		return
+	}
+
+	var game models.Game
+	if result := database.DB.Where("id = ? AND team_id = ?", gameID, teamID).First(&game); result.Error != nil {
+		http.Error(w, "Game not found", http.StatusNotFound)
+		return
+	}
+
+	if result := database.DB.Delete(&game); result.Error != nil {
+		http.Error(w, "Failed to delete game", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type UpdateScoreRequest struct {
+	FinalScore    int `json:"finalScore"`
+	OpponentScore int `json:"opponentScore"`
+}
+
+func UpdateGameScore(w http.ResponseWriter, r *http.Request) {
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamID"))
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+	gameID, err := uuid.Parse(chi.URLParam(r, "gameID"))
+	if err != nil {
+		http.Error(w, "Invalid game ID", http.StatusBadRequest)
+		return
+	}
+
+	var req UpdateScoreRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	var game models.Game
+	if result := database.DB.Where("id = ? AND team_id = ?", gameID, teamID).First(&game); result.Error != nil {
+		http.Error(w, "Game not found", http.StatusNotFound)
+		return
+	}
+
+	updates := map[string]interface{}{
+		"final_score":    req.FinalScore,
+		"opponent_score": req.OpponentScore,
+	}
+
+	if result := database.DB.Model(&game).Updates(updates); result.Error != nil {
+		http.Error(w, "Failed to update score", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(game)
+}
+
+type InningScore struct {
+	Inning        int `json:"inning"`
+	TeamScore     int `json:"teamScore"`
+	OpponentScore int `json:"opponentScore"`
+}
+
+type UpdateInningScoresRequest struct {
+	InningScores []InningScore `json:"inningScores"`
+}
+
+func UpdateInningScores(w http.ResponseWriter, r *http.Request) {
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamID"))
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+	gameID, err := uuid.Parse(chi.URLParam(r, "gameID"))
+	if err != nil {
+		http.Error(w, "Invalid game ID", http.StatusBadRequest)
+		return
+	}
+
+	var req UpdateInningScoresRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	var game models.Game
+	if result := database.DB.Where("id = ? AND team_id = ?", gameID, teamID).First(&game); result.Error != nil {
+		http.Error(w, "Game not found", http.StatusNotFound)
+		return
+	}
+
+	for _, inningScore := range req.InningScores {
+		if inningScore.Inning < 1 || inningScore.Inning > 7 {
+			http.Error(w, "Inning must be between 1 and 7", http.StatusBadRequest)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}

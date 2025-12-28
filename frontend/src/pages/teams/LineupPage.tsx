@@ -15,6 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { RefreshCw, Save } from "lucide-react";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { useToast } from "@/hooks/use-toast";
+import { getTodayAtMidnight, utcToLocalDate } from "@/utils/dateUtils";
 import {
   getTeamGames,
   getBattingOrder,
@@ -53,9 +54,36 @@ const LineupPage: React.FC = () => {
   const loadGames = async () => {
     try {
       const gamesData = await getTeamGames(teamId!);
-      setGames(gamesData);
-      if (gamesData.length > 0 && !selectedGame) {
-        setSelectedGame(gamesData[0]);
+
+      // Sort games: upcoming first, then past
+      const now = getTodayAtMidnight();
+
+      const upcomingGames = gamesData
+        .filter((game) => {
+          const localGameDate = utcToLocalDate(game.date);
+          return localGameDate >= now;
+        })
+        .sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+
+      const pastGames = gamesData
+        .filter((game) => {
+          const localGameDate = utcToLocalDate(game.date);
+          return localGameDate < now;
+        })
+        .sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        ); // Most recent past games first
+
+      const sortedGames = [...upcomingGames, ...pastGames];
+      setGames(sortedGames);
+
+      // Default to the first upcoming game, or if no upcoming games, the most recent past game
+      if (sortedGames.length > 0 && !selectedGame) {
+        const defaultGame =
+          upcomingGames.length > 0 ? upcomingGames[0] : pastGames[0];
+        setSelectedGame(defaultGame);
       }
     } catch (error) {
       toast({

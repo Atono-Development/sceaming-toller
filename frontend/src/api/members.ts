@@ -78,3 +78,10 @@ export const updateMyPitcherStatus = async (
   });
   return response.data;
 };
+
+export const updateMyGender = async (teamId: string, gender: string) => {
+  const response = await api.put(`/teams/${teamId}/members/me/gender`, {
+    gender,
+  });
+  return response.data;
+};

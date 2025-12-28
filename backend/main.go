@@ -63,6 +63,7 @@ func main() {
 			r.Put("/members/me/preferences", handlers.UpdateMyPreferences)
 			r.Get("/members/me", handlers.GetMyTeamMemberInfo)
 			r.Put("/members/me/pitcher", handlers.UpdateMyPitcherStatus)
+			r.Put("/members/me/gender", handlers.UpdateMyGender)
 
 			// Game-specific routes
 			r.Get("/games/{gameID}/attendance", handlers.GetAttendance)

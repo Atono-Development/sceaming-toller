@@ -40,9 +40,11 @@ import {
   getFieldingLineup,
   generateCompleteFieldingLineup,
   generateBattingOrder,
+  getAttendance,
   type BattingOrder,
   type FieldingLineup,
   type Game,
+  type Attendance,
 } from "@/api/games";
 
 // Sortable component for batting order players
@@ -116,6 +118,7 @@ const LineupPage: React.FC = () => {
   const [editableFieldingLineup, setEditableFieldingLineup] = useState<
     FieldingLineup[]
   >([]);
+  const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingBattingOrder, setEditingBattingOrder] = useState(false);
   const [editingFieldingLineup, setEditingFieldingLineup] = useState(false);
@@ -187,15 +190,17 @@ const LineupPage: React.FC = () => {
 
     try {
       setLoading(true);
-      const [batting, fielding] = await Promise.all([
+      const [batting, fielding, attendanceData] = await Promise.all([
         getBattingOrder(teamId!, selectedGame.id),
         getFieldingLineup(teamId!, selectedGame.id),
+        getAttendance(teamId!, selectedGame.id),
       ]);
 
       setBattingOrder(batting);
       setFieldingLineup(fielding);
       setEditableBattingOrder(batting);
       setEditableFieldingLineup(fielding);
+      setAttendance(attendanceData);
     } catch (error) {
       toast({
         title: "Error",
@@ -360,14 +365,6 @@ const LineupPage: React.FC = () => {
     setEditingFieldingLineup(false);
   };
 
-  const updatePlayerPosition = (playerId: string, newPosition: string) => {
-    setEditableFieldingLineup((players) =>
-      players.map((player) =>
-        player.id === playerId ? { ...player, position: newPosition } : player
-      )
-    );
-  };
-
   const positions = [
     "Pitcher",
     "C",
@@ -379,7 +376,71 @@ const LineupPage: React.FC = () => {
     "CF",
     "RF",
     "Rover",
+    "Bench",
   ];
+
+  const updatePlayerAssignment = (playerId: string, newPlayerId: string) => {
+    setEditableFieldingLineup((players) =>
+      players.map((player) =>
+        player.id === playerId
+          ? { ...player, teamMemberId: newPlayerId }
+          : player
+      )
+    );
+  };
+
+  const getAvailablePlayers = () => {
+    return attendance
+      .filter((a) => a.status === "going")
+      .map((a) => a.teamMember);
+  };
+
+  const validatePositionAssignment = (
+    playerId: string,
+    newPosition: string,
+    currentInning: number
+  ) => {
+    if (newPosition === "Bench") return true; // Bench can have multiple players
+
+    const currentAssignment = editableFieldingLineup.find(
+      (p) => p.id === playerId
+    );
+    if (!currentAssignment) return true;
+
+    // Check if another player already has this position in the same inning
+    const duplicatePosition = editableFieldingLineup.find(
+      (p) =>
+        p.id !== playerId &&
+        p.inning === currentInning &&
+        p.position === newPosition
+    );
+
+    if (duplicatePosition) {
+      toast({
+        title: "Invalid Assignment",
+        description: `Position ${newPosition} is already assigned to another player in inning ${currentInning}`,
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const updatePlayerPosition = (playerId: string, newPosition: string) => {
+    const player = editableFieldingLineup.find((p) => p.id === playerId);
+    if (!player) return;
+
+    if (!validatePositionAssignment(playerId, newPosition, player.inning)) {
+      return;
+    }
+
+    setEditableFieldingLineup((players) =>
+      players.map((p) =>
+        p.id === playerId ? { ...p, position: newPosition } : p
+      )
+    );
+  };
 
   if (!teamId || !currentTeam) {
     return <div>Loading...</div>;
@@ -612,38 +673,66 @@ const LineupPage: React.FC = () => {
                                 className="flex items-center gap-2 p-2 rounded border bg-white"
                               >
                                 {editingFieldingLineup ? (
-                                  <Select
-                                    value={player.position}
-                                    onValueChange={(value) =>
-                                      updatePlayerPosition(player.id, value)
-                                    }
-                                  >
-                                    <SelectTrigger className="w-20">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {positions.map((position) => (
-                                        <SelectItem
-                                          key={position}
-                                          value={position}
-                                        >
-                                          {position}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                  <div className="flex items-center gap-2">
+                                    <Select
+                                      value={player.position}
+                                      onValueChange={(value) =>
+                                        updatePlayerPosition(player.id, value)
+                                      }
+                                    >
+                                      <SelectTrigger className="w-20">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {positions.map((position) => (
+                                          <SelectItem
+                                            key={position}
+                                            value={position}
+                                          >
+                                            {position}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <Select
+                                      value={player.teamMemberId || ""}
+                                      onValueChange={(value) =>
+                                        updatePlayerAssignment(player.id, value)
+                                      }
+                                    >
+                                      <SelectTrigger className="w-32">
+                                        <SelectValue placeholder="Select player" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {getAvailablePlayers().map(
+                                          (teamMember) => (
+                                            <SelectItem
+                                              key={teamMember?.id}
+                                              value={teamMember?.id || ""}
+                                            >
+                                              {teamMember?.user?.name ||
+                                                "Unknown"}
+                                            </SelectItem>
+                                          )
+                                        )}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
                                 ) : (
-                                  <Badge
-                                    className={getPositionColor(
-                                      player.position
-                                    )}
-                                  >
-                                    {player.position}
-                                  </Badge>
+                                  <>
+                                    <Badge
+                                      className={getPositionColor(
+                                        player.position
+                                      )}
+                                    >
+                                      {player.position}
+                                    </Badge>
+                                    <span className="text-sm font-medium">
+                                      {player.teamMember?.user?.name ||
+                                        "Unknown"}
+                                    </span>
+                                  </>
                                 )}
-                                <span className="text-sm font-medium">
-                                  {player.teamMember?.user?.name || "Unknown"}
-                                </span>
                               </div>
                             ))}
                           </div>

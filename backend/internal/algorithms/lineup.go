@@ -2,6 +2,7 @@ package algorithms
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 	"sort"
 	"strings"
@@ -285,9 +286,10 @@ func selectN(members []models.TeamMember, n int) []models.TeamMember {
 
 // PlayerInningTrack tracks how many innings each player has played
 type PlayerInningTrack struct {
-	TeamMemberID uuid.UUID
-	InningsPlayed int
+	TeamMemberID    uuid.UUID
+	InningsPlayed   int
 	PositionsPlayed []string
+	LastSatOutInning int // Track which inning they last sat out
 }
 
 // GenerateCompleteFieldingLineup creates fielding lineups for all 7 innings with even playing time
@@ -323,9 +325,10 @@ func GenerateCompleteFieldingLineup(gameID uuid.UUID) ([]models.FieldingLineup, 
 	playerTracks := make(map[uuid.UUID]*PlayerInningTrack)
 	for _, member := range confirmed {
 		playerTracks[member.ID] = &PlayerInningTrack{
-			TeamMemberID:   member.ID,
-			InningsPlayed:  0,
-			PositionsPlayed: make([]string, 0),
+			TeamMemberID:     member.ID,
+			InningsPlayed:    0,
+			PositionsPlayed:  make([]string, 0),
+			LastSatOutInning: -1, // -1 means they haven't sat out yet
 		}
 	}
 
@@ -358,7 +361,13 @@ func generateBalancedInningLineup(gameID uuid.UUID, inning int, confirmed []mode
 		if inningsI != inningsJ {
 			return inningsI < inningsJ
 		}
-		// If equal innings, sort by name for consistency
+		// If equal innings, prioritize those who sat out most recently
+		satOutI := playerTracks[sortedPlayers[i].ID].LastSatOutInning
+		satOutJ := playerTracks[sortedPlayers[j].ID].LastSatOutInning
+		if satOutI != satOutJ {
+			return satOutI > satOutJ // More recent sit out gets priority
+		}
+		// If still equal, sort by name for consistency
 		return sortedPlayers[i].ID.String() < sortedPlayers[j].ID.String()
 	})
 
@@ -456,6 +465,18 @@ func generateBalancedInningLineup(gameID uuid.UUID, inning int, confirmed []mode
 		}
 	}
 
+	// Update player tracking for those who sat out this inning
+	selectedIDs := make(map[uuid.UUID]bool)
+	for _, selectedPlayer := range selected {
+		selectedIDs[selectedPlayer.ID] = true
+	}
+	
+	for _, member := range confirmed {
+		if !selectedIDs[member.ID] {
+			playerTracks[member.ID].LastSatOutInning = inning
+		}
+	}
+
 	return assignments, nil
 }
 
@@ -476,14 +497,38 @@ func selectBalancedTeam(sortedPlayers []models.TeamMember, playerTracks map[uuid
 		}
 	}
 
-	// Try different combinations for 5-4 split
+	// Debug: print counts
+	if len(males) < 5 && len(females) < 5 {
+		return nil, errors.New(fmt.Sprintf("cannot achieve 5-4 split: %d males, %d females available", len(males), len(females)))
+	}
+
+	// Sort males and females by innings played (ascending) to ensure fair rotation
+	sort.Slice(males, func(i, j int) bool {
+		inningsI := playerTracks[males[i].ID].InningsPlayed
+		inningsJ := playerTracks[males[j].ID].InningsPlayed
+		return inningsI < inningsJ
+	})
+	
+	sort.Slice(females, func(i, j int) bool {
+		inningsI := playerTracks[females[i].ID].InningsPlayed
+		inningsJ := playerTracks[females[j].ID].InningsPlayed
+		return inningsI < inningsJ
+	})
+	
+	// Try different combinations for 5-4 split, prioritizing balance
 	var selected []models.TeamMember
 	
-	// Try 5 males, 4 females
+	// Calculate total available players
+	totalAvailable := len(males) + len(females)
+	if totalAvailable < 9 {
+		return nil, errors.New("not enough players available")
+	}
+	
+	// Strategy 1: Try 5 males, 4 females
 	if len(males) >= 5 && len(females) >= 4 {
 		selected = append(selectN(males, 5), selectN(females, 4)...)
 	} else if len(females) >= 5 && len(males) >= 4 {
-		// Try 5 females, 4 males
+		// Strategy 2: Try 5 females, 4 males
 		selected = append(selectN(females, 5), selectN(males, 4)...)
 	} else {
 		return nil, errors.New("cannot achieve 5-4 gender split with available players")

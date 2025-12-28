@@ -9,6 +9,7 @@ import {
   getBattingOrder,
   getFieldingLineup,
   generateCompleteFieldingLineup,
+  generateBattingOrder,
   type BattingOrder,
   type FieldingLineup,
   type Game,
@@ -99,6 +100,26 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
     }
   };
 
+  const generateBattingOrderLineup = async () => {
+    try {
+      setLoading(true);
+      await generateBattingOrder(teamId, game.id);
+      await loadLineups();
+      toast({
+        title: "Success",
+        description: "Generated batting order with gender balance",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to generate batting order",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getPositionColor = (position: string) => {
     const infieldPositions = ["1B", "2B", "3B", "SS", "C"];
     const outfieldPositions = ["LF", "CF", "RF"];
@@ -144,6 +165,19 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
           </TabsList>
 
           <TabsContent value="batting" className="space-y-4">
+            <div className="mb-4">
+              <Button
+                onClick={generateBattingOrderLineup}
+                disabled={loading}
+                className="flex items-center gap-2"
+                variant="outline"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                />
+                Regenerate Batting Order
+              </Button>
+            </div>
             {battingOrder.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">
                 No batting order has been set for this game yet.
@@ -163,9 +197,14 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
                         {player.teamMember?.user?.name || "Unknown Player"}
                       </span>
                     </div>
-                    {player.isGenerated && (
-                      <Badge variant="secondary">Auto-generated</Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">
+                        {player.teamMember?.gender === "M" ? "Male" : "Female"}
+                      </Badge>
+                      {player.isGenerated && (
+                        <Badge variant="secondary">Auto-generated</Badge>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

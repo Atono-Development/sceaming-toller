@@ -76,6 +76,40 @@ export function GamesPage() {
 
   if (isLoading) return <div>Loading schedule...</div>;
 
+  // Sort games: upcoming first, then past
+  const now = new Date();
+  now.setHours(0, 0, 0, 0); // Reset to start of day for comparison
+
+  const upcomingGames = games
+    ?.filter((game: any) => {
+      const gameDate = new Date(game.date);
+      const localGameDate = new Date(
+        gameDate.getUTCFullYear(),
+        gameDate.getUTCMonth(),
+        gameDate.getUTCDate()
+      );
+      return localGameDate >= now;
+    })
+    .sort(
+      (a: any, b: any) =>
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+  const pastGames = games
+    ?.filter((game: any) => {
+      const gameDate = new Date(game.date);
+      const localGameDate = new Date(
+        gameDate.getUTCFullYear(),
+        gameDate.getUTCMonth(),
+        gameDate.getUTCDate()
+      );
+      return localGameDate < now;
+    })
+    .sort(
+      (a: any, b: any) =>
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+    ); // Most recent past games first;
+
   return (
     <div className="container py-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -91,97 +125,205 @@ export function GamesPage() {
       </div>
 
       <div className="grid gap-4">
-        {games?.map((game: any) => (
-          <Card key={game.id}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xl font-semibold">
-                vs {game.opposingTeam}
-              </CardTitle>
-              <div className="text-sm font-medium text-muted-foreground">
-                {(() => {
-                  const d = new Date(game.date);
-                  const localDate = new Date(
-                    d.getUTCFullYear(),
-                    d.getUTCMonth(),
-                    d.getUTCDate()
-                  );
-                  return format(localDate, "MMM d, yyyy");
-                })()}{" "}
-                • {game.time}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm text-muted-foreground">
-                Location: {game.location}
-              </div>
-              <div className="mt-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
-                {game.status}
-              </div>
+        {/* Upcoming Games Section */}
+        {upcomingGames && upcomingGames.length > 0 && (
+          <>
+            <div className="text-lg font-semibold text-slate-700 mt-4">
+              Upcoming Games
+            </div>
+            {upcomingGames.map((game: any) => (
+              <Card key={game.id}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xl font-semibold">
+                    vs {game.opposingTeam}
+                  </CardTitle>
+                  <div className="text-sm font-medium text-muted-foreground">
+                    {(() => {
+                      const d = new Date(game.date);
+                      const localDate = new Date(
+                        d.getUTCFullYear(),
+                        d.getUTCMonth(),
+                        d.getUTCDate()
+                      );
+                      return format(localDate, "MMM d, yyyy");
+                    })()}{" "}
+                    • {game.time}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm text-muted-foreground">
+                    Location: {game.location}
+                  </div>
+                  <div className="mt-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
+                    {game.status}
+                  </div>
 
-              {/* Attendance Section */}
-              <div className="mt-4 pt-4 border-t">
-                <div className="text-sm text-slate-600 mb-2">
-                  Your attendance:
-                </div>
-                <div className="flex space-x-2">
-                  <Button
-                    size="sm"
-                    variant={
-                      attendanceStates[game.id]?.status === "going"
-                        ? "default"
-                        : "outline"
-                    }
-                    className={`flex-1 ${
-                      attendanceStates[game.id]?.status === "going"
-                        ? "bg-green-600 hover:bg-green-700 text-white"
-                        : ""
-                    }`}
-                    onClick={() => handleAttendanceChange(game.id, "going")}
-                  >
-                    Going
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={
-                      attendanceStates[game.id]?.status === "maybe"
-                        ? "default"
-                        : "outline"
-                    }
-                    className={`flex-1 ${
-                      attendanceStates[game.id]?.status === "maybe"
-                        ? "bg-yellow-500 hover:bg-yellow-600 text-white"
-                        : ""
-                    }`}
-                    onClick={() => handleAttendanceChange(game.id, "maybe")}
-                  >
-                    Maybe
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={
-                      attendanceStates[game.id]?.status === "not_going"
-                        ? "default"
-                        : "outline"
-                    }
-                    className={`flex-1 ${
-                      attendanceStates[game.id]?.status === "not_going"
-                        ? "bg-red-600 hover:bg-red-700 text-white"
-                        : ""
-                    }`}
-                    onClick={() => handleAttendanceChange(game.id, "not_going")}
-                  >
-                    Not Going
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {games?.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            No games scheduled yet.
-          </div>
+                  {/* Attendance Section */}
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="text-sm text-slate-600 mb-2">
+                      Your attendance:
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        size="sm"
+                        variant={
+                          attendanceStates[game.id]?.status === "going"
+                            ? "default"
+                            : "outline"
+                        }
+                        className={`flex-1 ${
+                          attendanceStates[game.id]?.status === "going"
+                            ? "bg-green-600 hover:bg-green-700 text-white"
+                            : ""
+                        }`}
+                        onClick={() => handleAttendanceChange(game.id, "going")}
+                      >
+                        Going
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={
+                          attendanceStates[game.id]?.status === "maybe"
+                            ? "default"
+                            : "outline"
+                        }
+                        className={`flex-1 ${
+                          attendanceStates[game.id]?.status === "maybe"
+                            ? "bg-yellow-500 hover:bg-yellow-600 text-white"
+                            : ""
+                        }`}
+                        onClick={() => handleAttendanceChange(game.id, "maybe")}
+                      >
+                        Maybe
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={
+                          attendanceStates[game.id]?.status === "not_going"
+                            ? "default"
+                            : "outline"
+                        }
+                        className={`flex-1 ${
+                          attendanceStates[game.id]?.status === "not_going"
+                            ? "bg-red-600 hover:bg-red-700 text-white"
+                            : ""
+                        }`}
+                        onClick={() =>
+                          handleAttendanceChange(game.id, "not_going")
+                        }
+                      >
+                        Not Going
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </>
         )}
+
+        {/* Past Games Section */}
+        {pastGames && pastGames.length > 0 && (
+          <>
+            <div className="text-lg font-semibold text-slate-500 mt-6">
+              Past Games
+            </div>
+            {pastGames.map((game: any) => (
+              <Card key={game.id} className="opacity-75">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xl font-semibold">
+                    vs {game.opposingTeam}
+                  </CardTitle>
+                  <div className="text-sm font-medium text-muted-foreground">
+                    {(() => {
+                      const d = new Date(game.date);
+                      const localDate = new Date(
+                        d.getUTCFullYear(),
+                        d.getUTCMonth(),
+                        d.getUTCDate()
+                      );
+                      return format(localDate, "MMM d, yyyy");
+                    })()}{" "}
+                    • {game.time}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm text-muted-foreground">
+                    Location: {game.location}
+                  </div>
+                  <div className="mt-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
+                    {game.status}
+                  </div>
+
+                  {/* Attendance Section - Read-only for past games */}
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="text-sm text-slate-600 mb-2">
+                      Your attendance:
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        size="sm"
+                        variant={
+                          attendanceStates[game.id]?.status === "going"
+                            ? "default"
+                            : "outline"
+                        }
+                        className={`flex-1 ${
+                          attendanceStates[game.id]?.status === "going"
+                            ? "bg-green-600 hover:bg-green-700 text-white"
+                            : ""
+                        }`}
+                        disabled
+                      >
+                        Going
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={
+                          attendanceStates[game.id]?.status === "maybe"
+                            ? "default"
+                            : "outline"
+                        }
+                        className={`flex-1 ${
+                          attendanceStates[game.id]?.status === "maybe"
+                            ? "bg-yellow-500 hover:bg-yellow-600 text-white"
+                            : ""
+                        }`}
+                        disabled
+                      >
+                        Maybe
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={
+                          attendanceStates[game.id]?.status === "not_going"
+                            ? "default"
+                            : "outline"
+                        }
+                        className={`flex-1 ${
+                          attendanceStates[game.id]?.status === "not_going"
+                            ? "bg-red-600 hover:bg-red-700 text-white"
+                            : ""
+                        }`}
+                        disabled
+                      >
+                        Not Going
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </>
+        )}
+
+        {/* No games message */}
+        {(!upcomingGames || upcomingGames.length === 0) &&
+          (!pastGames || pastGames.length === 0) && (
+            <div className="text-center py-12 text-muted-foreground">
+              No games scheduled yet.
+            </div>
+          )}
       </div>
     </div>
   );

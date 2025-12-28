@@ -1,8 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { Plus, Edit, Trash2, Trophy } from "lucide-react";
 import { format } from "date-fns";
 import { getTeamGames } from "../../lib/api";
+import { deleteGame } from "../../api/games";
 import { Button } from "../../components/ui/button";
 import {
   Card,
@@ -24,9 +25,20 @@ export function GamesPage() {
   const { teamId } = useParams();
   const { currentTeam } = useTeamContext();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [attendanceStates, setAttendanceStates] = useState<
     Record<string, Attendance | null>
   >({});
+
+  const deleteGameMutation = useMutation({
+    mutationFn: (gameId: string) => deleteGame(teamId!, gameId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["team-games", teamId] });
+    },
+    onError: () => {
+      console.error("Failed to delete game");
+    },
+  });
 
   const { data: games, isLoading } = useQuery({
     queryKey: ["team-games", teamId],
@@ -64,6 +76,12 @@ export function GamesPage() {
       }));
     } catch (error) {
       console.error("Failed to update attendance:", error);
+    }
+  };
+
+  const handleDeleteGame = async (gameId: string) => {
+    if (window.confirm("Are you sure you want to delete this game?")) {
+      deleteGameMutation.mutate(gameId);
     }
   };
 
@@ -127,9 +145,33 @@ export function GamesPage() {
                   <CardTitle className="text-xl font-semibold">
                     vs {game.opposingTeam}
                   </CardTitle>
-                  <div className="text-sm font-medium text-muted-foreground">
-                    {format(utcToLocalDate(game.date), "MMM d, yyyy")} •{" "}
-                    {game.time}
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-medium text-muted-foreground">
+                      {format(utcToLocalDate(game.date), "MMM d, yyyy")} •{" "}
+                      {game.time}
+                    </div>
+                    {currentTeam?.membership?.role === "admin" && (
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="outline" asChild>
+                          <Link to={`/teams/${teamId}/games/${game.id}/edit`}>
+                            <Edit className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link to={`/teams/${teamId}/games/${game.id}/score`}>
+                            <Trophy className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteGame(game.id)}
+                          disabled={deleteGameMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -139,6 +181,23 @@ export function GamesPage() {
                   <div className="mt-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
                     {game.status}
                   </div>
+
+                  {/* Score Display */}
+                  {game.finalScore !== undefined &&
+                    game.opponentScore !== undefined && (
+                      <div className="mt-2 text-lg font-semibold">
+                        {game.finalScore} - {game.opponentScore}
+                        {game.finalScore > game.opponentScore && (
+                          <span className="ml-2 text-green-600">Win</span>
+                        )}
+                        {game.finalScore < game.opponentScore && (
+                          <span className="ml-2 text-red-600">Loss</span>
+                        )}
+                        {game.finalScore === game.opponentScore && (
+                          <span className="ml-2 text-yellow-600">Tie</span>
+                        )}
+                      </div>
+                    )}
 
                   {/* Attendance Section */}
                   <div className="mt-4 pt-4 border-t">
@@ -216,9 +275,33 @@ export function GamesPage() {
                   <CardTitle className="text-xl font-semibold">
                     vs {game.opposingTeam}
                   </CardTitle>
-                  <div className="text-sm font-medium text-muted-foreground">
-                    {format(utcToLocalDate(game.date), "MMM d, yyyy")} •{" "}
-                    {game.time}
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-medium text-muted-foreground">
+                      {format(utcToLocalDate(game.date), "MMM d, yyyy")} •{" "}
+                      {game.time}
+                    </div>
+                    {currentTeam?.membership?.role === "admin" && (
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="outline" asChild>
+                          <Link to={`/teams/${teamId}/games/${game.id}/edit`}>
+                            <Edit className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link to={`/teams/${teamId}/games/${game.id}/score`}>
+                            <Trophy className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteGame(game.id)}
+                          disabled={deleteGameMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -228,6 +311,23 @@ export function GamesPage() {
                   <div className="mt-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
                     {game.status}
                   </div>
+
+                  {/* Score Display */}
+                  {game.finalScore !== undefined &&
+                    game.opponentScore !== undefined && (
+                      <div className="mt-2 text-lg font-semibold">
+                        {game.finalScore} - {game.opponentScore}
+                        {game.finalScore > game.opponentScore && (
+                          <span className="ml-2 text-green-600">Win</span>
+                        )}
+                        {game.finalScore < game.opponentScore && (
+                          <span className="ml-2 text-red-600">Loss</span>
+                        )}
+                        {game.finalScore === game.opponentScore && (
+                          <span className="ml-2 text-yellow-600">Tie</span>
+                        )}
+                      </div>
+                    )}
 
                   {/* Attendance Section - Read-only for past games */}
                   <div className="mt-4 pt-4 border-t">

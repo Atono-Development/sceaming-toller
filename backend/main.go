@@ -56,7 +56,6 @@ func main() {
 			r.Get("/", handlers.GetTeam)
 			r.Get("/games", handlers.GetTeamGames)
 			r.Get("/games/{gameID}", handlers.GetGame)
-			
 			r.Get("/members", handlers.GetTeamMembers)
 
 			// Player preference routes
@@ -66,16 +65,19 @@ func main() {
 			r.Put("/members/me/pitcher", handlers.UpdateMyPitcherStatus)
 
 			// Game-specific routes
-			r.Route("/games/{gameID}", func(r chi.Router) {
-				r.Get("/attendance", handlers.GetAttendance)
-				r.Put("/attendance", handlers.UpdateAttendance)
-				r.Get("/batting-order", handlers.GetBattingOrder)
-				r.Get("/fielding", handlers.GetFieldingLineup)
-			})
+			r.Get("/games/{gameID}/attendance", handlers.GetAttendance)
+			r.Put("/games/{gameID}/attendance", handlers.UpdateAttendance)
+			r.Get("/games/{gameID}/batting-order", handlers.GetBattingOrder)
+			r.Get("/games/{gameID}/fielding", handlers.GetFieldingLineup)
 
+			// Admin-only routes
 			r.Group(func(r chi.Router) {
 				r.Use(middleware.RequireTeamAdmin)
 				r.Post("/games", handlers.CreateGame)
+				r.Put("/games/{gameID}", handlers.UpdateGame)
+				r.Delete("/games/{gameID}", handlers.DeleteGame)
+				r.Put("/games/{gameID}/score", handlers.UpdateGameScore)
+				r.Put("/games/{gameID}/innings", handlers.UpdateInningScores)
 				
 				r.Post("/invitations", handlers.InviteMember)
 				r.Delete("/members/{memberID}", handlers.RemoveMember)

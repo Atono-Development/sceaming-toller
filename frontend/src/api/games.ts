@@ -100,3 +100,47 @@ export const getFieldingLineup = async (teamId: string, gameId: string) => {
   );
   return response.data;
 };
+
+export const updateGame = async (
+  teamId: string,
+  gameId: string,
+  gameData: Partial<Game>
+) => {
+  const response = await api.put(`/teams/${teamId}/games/${gameId}`, gameData);
+  return response.data;
+};
+
+export const deleteGame = async (teamId: string, gameId: string) => {
+  const response = await api.delete(`/teams/${teamId}/games/${gameId}`);
+  return response.data;
+};
+
+export const updateGameScore = async (
+  teamId: string,
+  gameId: string,
+  finalScore: number,
+  opponentScore: number
+) => {
+  const response = await api.put(`/teams/${teamId}/games/${gameId}/score`, {
+    finalScore,
+    opponentScore,
+  });
+  return response.data;
+};
+
+export interface InningScore {
+  inning: number;
+  teamScore: number;
+  opponentScore: number;
+}
+
+export const updateInningScores = async (
+  teamId: string,
+  gameId: string,
+  inningScores: InningScore[]
+) => {
+  const response = await api.put(`/teams/${teamId}/games/${gameId}/innings`, {
+    inningScores,
+  });
+  return response.data;
+};

@@ -2,17 +2,15 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
-	"github.com/liam/screaming-toller/backend/internal/algorithms"
 	"github.com/liam/screaming-toller/backend/internal/database"
 	"github.com/liam/screaming-toller/backend/internal/models"
+	"github.com/liam/screaming-toller/backend/internal/algorithms"
 )
 
 type CreateGameRequest struct {
@@ -385,6 +383,89 @@ func UpdateInningScores(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
 }
 
+type FieldingLineupUpdateRequest struct {
+	Lineups []models.FieldingLineup `json:"lineups"`
+}
+
+func UpdateFieldingLineup(w http.ResponseWriter, r *http.Request) {
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamID"))
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+	gameID, err := uuid.Parse(chi.URLParam(r, "gameID"))
+	if err != nil {
+		http.Error(w, "Invalid game ID", http.StatusBadRequest)
+		return
+	}
+
+	var req FieldingLineupUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Verify game belongs to team
+	var game models.Game
+	if result := database.DB.Where("id = ? AND team_id = ?", gameID, teamID).First(&game); result.Error != nil {
+		http.Error(w, "Game not found", http.StatusNotFound)
+		return
+	}
+
+	// Delete existing fielding lineup for this game
+	if result := database.DB.Where("game_id = ?", gameID).Delete(&models.FieldingLineup{}); result.Error != nil {
+		http.Error(w, "Failed to clear existing lineup", http.StatusInternalServerError)
+		return
+	}
+
+	// Create new fielding lineup entries
+	for _, lineup := range req.Lineups {
+		lineup.GameID = gameID
+		lineup.ID = uuid.New() // Generate new ID
+		lineup.CreatedAt = time.Now()
+		
+		if result := database.DB.Create(&lineup); result.Error != nil {
+			http.Error(w, "Failed to save lineup", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+func DeleteFieldingLineup(w http.ResponseWriter, r *http.Request) {
+	teamID, err := uuid.Parse(chi.URLParam(r, "teamID"))
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+	gameID, err := uuid.Parse(chi.URLParam(r, "gameID"))
+	if err != nil {
+		http.Error(w, "Invalid game ID", http.StatusBadRequest)
+		return
+	}
+
+	// Verify game belongs to team
+	var game models.Game
+	if result := database.DB.Where("id = ? AND team_id = ?", gameID, teamID).First(&game); result.Error != nil {
+		http.Error(w, "Game not found", http.StatusNotFound)
+		return
+	}
+
+	// Delete fielding lineup for this game
+	if result := database.DB.Where("game_id = ?", gameID).Delete(&models.FieldingLineup{}); result.Error != nil {
+		http.Error(w, "Failed to delete lineup", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type BattingOrderUpdateRequest struct {
+	BattingOrder []models.BattingOrder `json:"battingOrder"`
+}
+
 func GenerateBattingOrder(w http.ResponseWriter, r *http.Request) {
 	teamID, err := uuid.Parse(chi.URLParam(r, "teamID"))
 	if err != nil {
@@ -404,31 +485,29 @@ func GenerateBattingOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Call algorithm to generate batting order
+	battingOrder, err := algorithms.GenerateBattingOrder(gameID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Delete existing batting order for this game
 	if result := database.DB.Where("game_id = ?", gameID).Delete(&models.BattingOrder{}); result.Error != nil {
 		http.Error(w, "Failed to clear existing batting order", http.StatusInternalServerError)
 		return
 	}
 
-	// Generate new batting order
-	battingOrder, err := algorithms.GenerateBattingOrder(gameID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Save to database
-	if result := database.DB.Create(&battingOrder); result.Error != nil {
-		http.Error(w, "Failed to save batting order", http.StatusInternalServerError)
-		return
+	// Create new batting order entries
+	for _, order := range battingOrder {
+		if result := database.DB.Create(&order); result.Error != nil {
+			http.Error(w, "Failed to save batting order", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(battingOrder)
-}
-
-type UpdateBattingOrderRequest struct {
-	BattingOrder []models.BattingOrder `json:"battingOrder"`
 }
 
 func UpdateBattingOrder(w http.ResponseWriter, r *http.Request) {
@@ -443,6 +522,12 @@ func UpdateBattingOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var req BattingOrderUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
 	// Verify game belongs to team
 	var game models.Game
 	if result := database.DB.Where("id = ? AND team_id = ?", gameID, teamID).First(&game); result.Error != nil {
@@ -450,38 +535,26 @@ func UpdateBattingOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req UpdateBattingOrderRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	// Validate batting order
-	if err := validateBattingOrder(req.BattingOrder); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Delete existing batting order
+	// Delete existing batting order for this game
 	if result := database.DB.Where("game_id = ?", gameID).Delete(&models.BattingOrder{}); result.Error != nil {
 		http.Error(w, "Failed to clear existing batting order", http.StatusInternalServerError)
 		return
 	}
 
-	// Set game ID and create new batting order
-	for i := range req.BattingOrder {
-		req.BattingOrder[i].GameID = gameID
-		req.BattingOrder[i].IsGenerated = false // Mark as manually edited
-	}
-
-	// Save to database
-	if result := database.DB.Create(&req.BattingOrder); result.Error != nil {
-		http.Error(w, "Failed to save batting order", http.StatusInternalServerError)
-		return
+	// Create new batting order entries
+	for _, order := range req.BattingOrder {
+		order.GameID = gameID
+		order.ID = uuid.New()
+		order.CreatedAt = time.Now()
+		
+		if result := database.DB.Create(&order); result.Error != nil {
+			http.Error(w, "Failed to save batting order", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(req.BattingOrder)
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
 }
 
 func DeleteBattingOrder(w http.ResponseWriter, r *http.Request) {
@@ -503,33 +576,13 @@ func DeleteBattingOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delete batting order
+	// Delete batting order for this game
 	if result := database.DB.Where("game_id = ?", gameID).Delete(&models.BattingOrder{}); result.Error != nil {
 		http.Error(w, "Failed to delete batting order", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
-}
-
-func validateBattingOrder(battingOrder []models.BattingOrder) error {
-	if len(battingOrder) < 9 {
-		return errors.New("batting order must have at least 9 players")
-	}
-
-	// Check for duplicate positions
-	positions := make(map[int]bool)
-	for _, bo := range battingOrder {
-		if positions[bo.BattingPosition] {
-			return errors.New("duplicate batting position found")
-		}
-		positions[bo.BattingPosition] = true
-	}
-
-	// TODO: Add gender alternation validation if needed
-	// This would require loading the team members to check genders
-
-	return nil
 }
 
 func GenerateFieldingLineup(w http.ResponseWriter, r *http.Request) {
@@ -544,14 +597,17 @@ func GenerateFieldingLineup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get inning from query parameter (default to 1)
+	// Get inning from query params
 	inningStr := r.URL.Query().Get("inning")
-	inning := 1
-	if inningStr != "" {
-		if inning, err = strconv.Atoi(inningStr); err != nil || inning < 1 || inning > 7 {
-			http.Error(w, "Invalid inning. Must be between 1 and 7", http.StatusBadRequest)
-			return
-		}
+	if inningStr == "" {
+		http.Error(w, "Inning parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	var inning int
+	if _, err := fmt.Sscanf(inningStr, "%d", &inning); err != nil || inning < 1 || inning > 7 {
+		http.Error(w, "Invalid inning (must be 1-7)", http.StatusBadRequest)
+		return
 	}
 
 	// Verify game belongs to team
@@ -561,23 +617,25 @@ func GenerateFieldingLineup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delete existing fielding lineup for this inning
+	// Call algorithm to generate fielding lineup
+	fieldingLineup, err := algorithms.GenerateFieldingLineup(gameID, inning)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Delete existing fielding lineup for this inning and game
 	if result := database.DB.Where("game_id = ? AND inning = ?", gameID, inning).Delete(&models.FieldingLineup{}); result.Error != nil {
 		http.Error(w, "Failed to clear existing fielding lineup", http.StatusInternalServerError)
 		return
 	}
 
-	// Generate new fielding lineup
-	fieldingLineup, err := algorithms.GenerateFieldingLineup(gameID, inning)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Save to database
-	if result := database.DB.Create(&fieldingLineup); result.Error != nil {
-		http.Error(w, "Failed to save fielding lineup", http.StatusInternalServerError)
-		return
+	// Create new fielding lineup entries
+	for _, lineup := range fieldingLineup {
+		if result := database.DB.Create(&lineup); result.Error != nil {
+			http.Error(w, "Failed to save fielding lineup", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusCreated)
@@ -603,170 +661,27 @@ func GenerateCompleteFieldingLineup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delete existing fielding lineup for all innings of this game
+	// Call algorithm to generate complete fielding lineup
+	fieldingLineup, err := algorithms.GenerateCompleteFieldingLineup(gameID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Delete existing fielding lineup for this game
 	if result := database.DB.Where("game_id = ?", gameID).Delete(&models.FieldingLineup{}); result.Error != nil {
 		http.Error(w, "Failed to clear existing fielding lineup", http.StatusInternalServerError)
 		return
 	}
 
-	// Generate new complete fielding lineup for all 7 innings
-	fieldingLineup, err := algorithms.GenerateCompleteFieldingLineup(gameID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Save to database
-	if result := database.DB.Create(&fieldingLineup); result.Error != nil {
-		http.Error(w, "Failed to save fielding lineup", http.StatusInternalServerError)
-		return
+	// Create new fielding lineup entries
+	for _, lineup := range fieldingLineup {
+		if result := database.DB.Create(&lineup); result.Error != nil {
+			http.Error(w, "Failed to save fielding lineup", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(fieldingLineup)
-}
-
-type UpdateFieldingLineupRequest struct {
-	FieldingLineup []models.FieldingLineup `json:"fieldingLineup"`
-}
-
-func UpdateFieldingLineup(w http.ResponseWriter, r *http.Request) {
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamID"))
-	if err != nil {
-		http.Error(w, "Invalid team ID", http.StatusBadRequest)
-		return
-	}
-	gameID, err := uuid.Parse(chi.URLParam(r, "gameID"))
-	if err != nil {
-		http.Error(w, "Invalid game ID", http.StatusBadRequest)
-		return
-	}
-
-	// Verify game belongs to team
-	var game models.Game
-	if result := database.DB.Where("id = ? AND team_id = ?", gameID, teamID).First(&game); result.Error != nil {
-		http.Error(w, "Game not found", http.StatusNotFound)
-		return
-	}
-
-	var req UpdateFieldingLineupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	// Validate fielding lineup
-	if err := validateFieldingLineup(req.FieldingLineup); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Group by inning and delete existing lineups for those innings
-	innings := make(map[int]bool)
-	for _, fl := range req.FieldingLineup {
-		innings[fl.Inning] = true
-	}
-
-	for inning := range innings {
-		if result := database.DB.Where("game_id = ? AND inning = ?", gameID, inning).Delete(&models.FieldingLineup{}); result.Error != nil {
-			http.Error(w, "Failed to clear existing fielding lineup", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	// Set game ID and create new fielding lineup
-	for i := range req.FieldingLineup {
-		req.FieldingLineup[i].GameID = gameID
-		req.FieldingLineup[i].IsGenerated = false // Mark as manually edited
-	}
-
-	// Save to database
-	if result := database.DB.Create(&req.FieldingLineup); result.Error != nil {
-		http.Error(w, "Failed to save fielding lineup", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(req.FieldingLineup)
-}
-
-func DeleteFieldingLineup(w http.ResponseWriter, r *http.Request) {
-	teamID, err := uuid.Parse(chi.URLParam(r, "teamID"))
-	if err != nil {
-		http.Error(w, "Invalid team ID", http.StatusBadRequest)
-		return
-	}
-	gameID, err := uuid.Parse(chi.URLParam(r, "gameID"))
-	if err != nil {
-		http.Error(w, "Invalid game ID", http.StatusBadRequest)
-		return
-	}
-
-	// Get inning from query parameter (optional - if not provided, delete all innings)
-	inningStr := r.URL.Query().Get("inning")
-
-	// Verify game belongs to team
-	var game models.Game
-	if result := database.DB.Where("id = ? AND team_id = ?", gameID, teamID).First(&game); result.Error != nil {
-		http.Error(w, "Game not found", http.StatusNotFound)
-		return
-	}
-
-	var result *gorm.DB
-	if inningStr != "" {
-		// Delete specific inning
-		inning, err := strconv.Atoi(inningStr)
-		if err != nil || inning < 1 || inning > 7 {
-			http.Error(w, "Invalid inning. Must be between 1 and 7", http.StatusBadRequest)
-			return
-		}
-		result = database.DB.Where("game_id = ? AND inning = ?", gameID, inning).Delete(&models.FieldingLineup{})
-	} else {
-		// Delete all innings for this game
-		result = database.DB.Where("game_id = ?", gameID).Delete(&models.FieldingLineup{})
-	}
-
-	if result.Error != nil {
-		http.Error(w, "Failed to delete fielding lineup", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func validateFieldingLineup(fieldingLineup []models.FieldingLineup) error {
-	// Group by inning
-	innings := make(map[int][]models.FieldingLineup)
-	for _, fl := range fieldingLineup {
-		if fl.Inning < 1 || fl.Inning > 7 {
-			return errors.New("inning must be between 1 and 7")
-		}
-		innings[fl.Inning] = append(innings[fl.Inning], fl)
-	}
-
-	// Validate each inning has exactly 9 players with unique positions
-	validPositions := map[string]bool{"C": true, "1B": true, "2B": true, "3B": true, "SS": true, "LF": true, "CF": true, "RF": true, "Rover": true}
-
-	for inning, lineup := range innings {
-		if len(lineup) != 9 {
-			return errors.New("each inning must have exactly 9 players")
-		}
-
-		// Check for duplicate positions and invalid positions
-		positions := make(map[string]bool)
-		for _, fl := range lineup {
-			if !validPositions[fl.Position] {
-				return errors.New("invalid position: " + fl.Position)
-			}
-			if positions[fl.Position] {
-				return errors.New("duplicate position found in inning " + strconv.Itoa(inning) + ": " + fl.Position)
-			}
-			positions[fl.Position] = true
-		}
-	}
-
-	// TODO: Add 5-4 gender split validation if needed
-	// This would require loading the team members to check genders
-
-	return nil
 }

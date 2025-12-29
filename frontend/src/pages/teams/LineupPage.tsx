@@ -526,7 +526,16 @@ const LineupPage: React.FC = () => {
       }));
 
       await updateFieldingLineup(teamId!, selectedGame!.id, cleanedLineup);
-      setFieldingLineup([...editableFieldingLineup]);
+
+      // Reload the fresh lineup data from backend to get proper IDs
+      const [fielding, attendanceData] = await Promise.all([
+        getFieldingLineup(teamId!, selectedGame!.id),
+        getAttendance(teamId!, selectedGame!.id),
+      ]);
+
+      setFieldingLineup(fielding);
+      setEditableFieldingLineup(fielding);
+      setAttendance(attendanceData);
       setEditingFieldingLineup(false);
       toast({
         title: "Success",

@@ -197,7 +197,6 @@ const LineupPage: React.FC = () => {
         getAttendance(teamId!, selectedGame.id),
       ]);
 
-      console.log("Loaded fielding lineup:", fielding);
       setBattingOrder(batting);
       setFieldingLineup(fielding);
       setEditableBattingOrder(batting);
@@ -513,10 +512,6 @@ const LineupPage: React.FC = () => {
   };
 
   const startEditingFieldingLineup = () => {
-    console.log(
-      "Starting fielding lineup edit. Current fieldingLineup:",
-      fieldingLineup
-    );
     setEditingFieldingLineup(true);
     setEditableFieldingLineup([...fieldingLineup]);
   };
@@ -858,20 +853,11 @@ const LineupPage: React.FC = () => {
                       .sort(([a], [b]) => parseInt(a) - parseInt(b))
                       .map(([inning, players]) => {
                         // Separate fielding players from bench players
-                        console.log(`Inning ${inning} - All players:`, players);
                         const fieldingPlayers = players.filter(
                           (p) => p.position !== "Bench"
                         );
                         const benchPlayers = players.filter(
                           (p) => p.position === "Bench"
-                        );
-                        console.log(
-                          `Inning ${inning} - Fielding players:`,
-                          fieldingPlayers
-                        );
-                        console.log(
-                          `Inning ${inning} - Bench players:`,
-                          benchPlayers
                         );
 
                         return (

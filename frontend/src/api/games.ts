@@ -176,6 +176,20 @@ export const updateFieldingLineup = async (
   return response.data;
 };
 
+export const updateBattingOrder = async (
+  teamId: string,
+  gameId: string,
+  battingOrder: BattingOrder[]
+) => {
+  const response = await api.put(
+    `/teams/${teamId}/games/${gameId}/batting-order`,
+    {
+      battingOrder,
+    }
+  );
+  return response.data;
+};
+
 export const deleteFieldingLineup = async (teamId: string, gameId: string) => {
   const response = await api.delete(
     `/teams/${teamId}/games/${gameId}/fielding`

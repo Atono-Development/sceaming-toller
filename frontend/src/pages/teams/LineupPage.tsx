@@ -30,10 +30,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { RefreshCw, Save } from "lucide-react";
+import { RefreshCw, Save, Printer } from "lucide-react";
 import { useTeamContext } from "@/contexts/TeamContext";
 import { useToast } from "@/hooks/use-toast";
 import { getTodayAtMidnight, utcToLocalDate } from "@/utils/dateUtils";
+import PrintableLineup from "@/components/PrintableLineup";
 import {
   getTeamGames,
   getBattingOrder,
@@ -124,6 +125,20 @@ const LineupPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [editingBattingOrder, setEditingBattingOrder] = useState(false);
   const [editingFieldingLineup, setEditingFieldingLineup] = useState(false);
+  const [showPrintView, setShowPrintView] = useState(false);
+
+  // Add/remove class to body when print view is active
+  React.useEffect(() => {
+    if (showPrintView) {
+      document.body.classList.add("print-preview-active");
+    } else {
+      document.body.classList.remove("print-preview-active");
+    }
+
+    return () => {
+      document.body.classList.remove("print-preview-active");
+    };
+  }, [showPrintView]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -609,6 +624,37 @@ const LineupPage: React.FC = () => {
       .map((a) => a.teamMember);
   };
 
+  const getPositionsByInning = () => {
+    const positionsByInning: Record<number, Record<string, string>> = {};
+
+    // Use the current fielding lineup (not the editable one for printing)
+    fieldingLineup.forEach((assignment) => {
+      const inning = assignment.inning;
+      const position = assignment.position;
+      const playerName = assignment.teamMember?.user?.name || "Unknown";
+
+      if (!positionsByInning[inning]) {
+        positionsByInning[inning] = {};
+      }
+
+      if (position === "Bench") {
+        // For bench players, collect them in a comma-separated list
+        if (!positionsByInning[inning]["Bench"]) {
+          positionsByInning[inning]["Bench"] = "";
+        }
+        if (positionsByInning[inning]["Bench"]) {
+          positionsByInning[inning]["Bench"] += ", ";
+        }
+        positionsByInning[inning]["Bench"] += playerName;
+      } else {
+        // For fielding positions, assign the player directly
+        positionsByInning[inning][position] = playerName;
+      }
+    });
+
+    return positionsByInning;
+  };
+
   const validatePositionAssignment = (
     playerId: string,
     newPosition: string,
@@ -720,6 +766,15 @@ const LineupPage: React.FC = () => {
                   className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
                 />
                 Regenerate Batting Order
+              </Button>
+              <Button
+                onClick={() => setShowPrintView(!showPrintView)}
+                disabled={loading || battingOrder.length === 0}
+                className="flex items-center gap-2"
+                variant="secondary"
+              >
+                <Printer className="h-4 w-4" />
+                {showPrintView ? "Hide Print View" : "Print Lineup"}
               </Button>
             </div>
             <Tabs defaultValue="batting" className="w-full">
@@ -1103,6 +1158,34 @@ const LineupPage: React.FC = () => {
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Print View */}
+      {showPrintView && selectedGame && (
+        <div className="fixed inset-0 bg-white z-[9999] overflow-auto m-0 p-0">
+          <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center print:hidden m-0">
+            <h2 className="text-lg font-semibold">Print Preview</h2>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => window.print()}
+                className="flex items-center gap-2"
+              >
+                <Printer className="h-4 w-4" />
+                Print
+              </Button>
+              <Button onClick={() => setShowPrintView(false)} variant="outline">
+                Close
+              </Button>
+            </div>
+          </div>
+          <div className="p-4">
+            <PrintableLineup
+              game={selectedGame}
+              positionsByInning={getPositionsByInning()}
+              battingOrder={battingOrder}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

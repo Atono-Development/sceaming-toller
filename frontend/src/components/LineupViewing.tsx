@@ -70,7 +70,10 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
       if (!stats[playerName]) {
         stats[playerName] = { innings: 0, positions: [] };
       }
-      stats[playerName].innings++;
+      // Only count innings where player is not on the bench
+      if (player.position !== "Bench") {
+        stats[playerName].innings++;
+      }
       if (!stats[playerName].positions.includes(player.position)) {
         stats[playerName].positions.push(player.position);
       }

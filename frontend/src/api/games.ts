@@ -164,3 +164,21 @@ export const updateInningScores = async (
   });
   return response.data;
 };
+
+export const updateFieldingLineup = async (
+  teamId: string,
+  gameId: string,
+  lineups: FieldingLineup[]
+) => {
+  const response = await api.put(`/teams/${teamId}/games/${gameId}/fielding`, {
+    lineups,
+  });
+  return response.data;
+};
+
+export const deleteFieldingLineup = async (teamId: string, gameId: string) => {
+  const response = await api.delete(
+    `/teams/${teamId}/games/${gameId}/fielding`
+  );
+  return response.data;
+};

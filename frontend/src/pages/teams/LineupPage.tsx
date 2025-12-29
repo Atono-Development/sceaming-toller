@@ -263,11 +263,7 @@ const LineupPage: React.FC = () => {
 
     try {
       setLoading(true);
-      const generatedLineup = await generateCompleteFieldingLineup(
-        teamId!,
-        selectedGame.id
-      );
-      console.log("Generated lineup from API:", generatedLineup);
+      await generateCompleteFieldingLineup(teamId!, selectedGame.id);
 
       // Load the fresh lineup data
       const [batting, fielding, attendanceData] = await Promise.all([
@@ -276,25 +272,26 @@ const LineupPage: React.FC = () => {
         getAttendance(teamId!, selectedGame.id),
       ]);
 
-      console.log("Loaded lineup after generation:", fielding);
+      setBattingOrder(batting);
+      setFieldingLineup(fielding);
+      setEditableBattingOrder(batting);
+      setEditableFieldingLineup(fielding);
+      setAttendance(attendanceData);
 
       // After generating lineup, automatically assign unassigned players to bench
       const availablePlayers = attendanceData
         .filter((a) => a.status === "going")
         .map((a) => a.teamMember);
-      console.log("Available players:", availablePlayers);
 
       const assignedPlayerIds = new Set(
         fielding
           .filter((p) => p.position !== "Bench")
           .map((p) => p.teamMemberId)
       );
-      console.log("Assigned player IDs (fielding only):", assignedPlayerIds);
 
       const unassignedPlayers = availablePlayers.filter(
         (player) => player?.id && !assignedPlayerIds.has(player.id)
       );
-      console.log("Unassigned players:", unassignedPlayers);
 
       if (unassignedPlayers.length > 0) {
         // Create bench assignments for all 7 innings
@@ -321,7 +318,6 @@ const LineupPage: React.FC = () => {
 
         // Update both the main lineup and editable lineup
         const updatedLineup = [...fielding, ...benchAssignments];
-        console.log("Final lineup with bench assignments:", updatedLineup);
         setFieldingLineup(updatedLineup);
         setEditableFieldingLineup(updatedLineup);
         setBattingOrder(batting);
@@ -406,7 +402,6 @@ const LineupPage: React.FC = () => {
 
   const addBenchAssignments = () => {
     const availablePlayers = getAvailablePlayers();
-    console.log("Available players:", availablePlayers);
 
     const benchAssignments: FieldingLineup[] = [];
 
@@ -450,8 +445,6 @@ const LineupPage: React.FC = () => {
         }
       }
     });
-
-    console.log("Bench assignments created:", benchAssignments);
 
     if (benchAssignments.length === 0) {
       toast({

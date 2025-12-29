@@ -411,15 +411,8 @@ func UpdateFieldingLineup(w http.ResponseWriter, r *http.Request) {
 
 	var req FieldingLineupUpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		fmt.Printf("Error decoding request body: %v\n", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
-	}
-
-	fmt.Printf("Received %d lineups in request\n", len(req.Lineups))
-	for i, lineup := range req.Lineups {
-		fmt.Printf("Lineup %d: ID=%s, GameID=%s, Inning=%d, TeamMemberID=%s, Position=%s\n", 
-			i, lineup.ID, lineup.GameID, lineup.Inning, lineup.TeamMemberID, lineup.Position)
 	}
 
 	// Verify game belongs to team

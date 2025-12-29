@@ -61,8 +61,14 @@ const PrintableLineup: React.FC<PrintableLineupProps> = ({
               <tr className="bg-gray-100">
                 <th className="border p-1 text-left w-8">#</th>
                 <th className="border p-1 text-left">Player</th>
-                <th className="border p-1 text-center">Gender</th>
-                <th className="border p-1 text-center">Pitcher</th>
+                <th className="border p-1 text-center w-12">Gender</th>
+                <th className="border p-1 text-center w-16">Pitcher</th>
+                <th className="border p-1 text-center w-8">2</th>
+                <th className="border p-1 text-center w-8">3</th>
+                <th className="border p-1 text-center w-8">4</th>
+                <th className="border p-1 text-center w-8">5</th>
+                <th className="border p-1 text-center w-8">6</th>
+                <th className="border p-1 text-center w-8">7</th>
               </tr>
             </thead>
             <tbody>
@@ -78,6 +84,12 @@ const PrintableLineup: React.FC<PrintableLineupProps> = ({
                   <td className="border p-1 text-center">
                     {player.isPitcher ? "✓" : ""}
                   </td>
+                  <td className="border p-1 text-center"></td>
+                  <td className="border p-1 text-center"></td>
+                  <td className="border p-1 text-center"></td>
+                  <td className="border p-1 text-center"></td>
+                  <td className="border p-1 text-center"></td>
+                  <td className="border p-1 text-center"></td>
                 </tr>
               ))}
             </tbody>

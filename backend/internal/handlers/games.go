@@ -384,7 +384,17 @@ func UpdateInningScores(w http.ResponseWriter, r *http.Request) {
 }
 
 type FieldingLineupUpdateRequest struct {
-	Lineups []models.FieldingLineup `json:"lineups"`
+	Lineups []FieldingLineupUpdate `json:"lineups"`
+}
+
+type FieldingLineupUpdate struct {
+	ID           string    `json:"id"`
+	GameID       uuid.UUID `json:"gameId"`
+	Inning       int       `json:"inning"`
+	TeamMemberID uuid.UUID `json:"teamMemberId"`
+	Position     string    `json:"position"`
+	IsGenerated  bool      `json:"isGenerated"`
+	CreatedAt    time.Time `json:"createdAt"`
 }
 
 func UpdateFieldingLineup(w http.ResponseWriter, r *http.Request) {
@@ -401,8 +411,15 @@ func UpdateFieldingLineup(w http.ResponseWriter, r *http.Request) {
 
 	var req FieldingLineupUpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		fmt.Printf("Error decoding request body: %v\n", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
+	}
+
+	fmt.Printf("Received %d lineups in request\n", len(req.Lineups))
+	for i, lineup := range req.Lineups {
+		fmt.Printf("Lineup %d: ID=%s, GameID=%s, Inning=%d, TeamMemberID=%s, Position=%s\n", 
+			i, lineup.ID, lineup.GameID, lineup.Inning, lineup.TeamMemberID, lineup.Position)
 	}
 
 	// Verify game belongs to team
@@ -419,10 +436,28 @@ func UpdateFieldingLineup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create new fielding lineup entries
-	for _, lineup := range req.Lineups {
-		lineup.GameID = gameID
-		lineup.ID = uuid.New() // Generate new ID
-		lineup.CreatedAt = time.Now()
+	for _, lineupUpdate := range req.Lineups {
+		// Parse ID or generate new UUID for empty IDs or temporary IDs (bench assignments)
+		var id uuid.UUID
+		if lineupUpdate.ID == "" || lineupUpdate.ID == "00000000-0000-0000-0000-000000000000" || (len(lineupUpdate.ID) >= 5 && lineupUpdate.ID[:5] == "bench") {
+			id = uuid.New()
+		} else {
+			id, err = uuid.Parse(lineupUpdate.ID)
+			if err != nil {
+				id = uuid.New() // Fallback to new UUID if parsing fails
+			}
+		}
+		
+		// Convert to model type
+		lineup := models.FieldingLineup{
+			ID:           id,
+			GameID:       gameID,
+			Inning:       lineupUpdate.Inning,
+			TeamMemberID: lineupUpdate.TeamMemberID,
+			Position:     lineupUpdate.Position,
+			IsGenerated:  lineupUpdate.IsGenerated,
+			CreatedAt:    time.Now(),
+		}
 		
 		if result := database.DB.Create(&lineup); result.Error != nil {
 			http.Error(w, "Failed to save lineup", http.StatusInternalServerError)

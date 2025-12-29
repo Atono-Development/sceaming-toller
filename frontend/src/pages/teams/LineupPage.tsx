@@ -41,6 +41,7 @@ import {
   generateCompleteFieldingLineup,
   generateBattingOrder,
   getAttendance,
+  updateFieldingLineup,
   type BattingOrder,
   type FieldingLineup,
   type Game,
@@ -310,7 +311,7 @@ const LineupPage: React.FC = () => {
                 isGenerated: true,
                 createdAt: new Date().toISOString(),
                 teamMember: {
-                  gender: "M", // Default gender - should be fetched from team member data
+                  gender: (player as any).gender || "M", // Use actual gender from team member
                   user: player.user,
                 },
               });
@@ -441,7 +442,7 @@ const LineupPage: React.FC = () => {
               isGenerated: true,
               createdAt: new Date().toISOString(),
               teamMember: {
-                gender: "M", // Default gender - should be fetched from team member data
+                gender: (player as any).gender || "M", // Use actual gender from team member
                 user: player.user,
               },
             });
@@ -527,14 +528,29 @@ const LineupPage: React.FC = () => {
     setEditableFieldingLineup([...fieldingLineup]);
   };
 
-  const saveFieldingLineup = () => {
-    setFieldingLineup([...editableFieldingLineup]);
-    setEditingFieldingLineup(false);
-    toast({
-      title: "Success",
-      description: "Fielding positions updated successfully",
-    });
-    // TODO: Add API call to save to backend
+  const saveFieldingLineup = async () => {
+    try {
+      // Clean up the data before sending - remove temporary IDs and teamMember objects
+      const cleanedLineup = editableFieldingLineup.map((lineup) => ({
+        ...lineup,
+        id: lineup.id.startsWith("bench-") ? "" : lineup.id, // Remove temporary bench IDs
+        teamMember: undefined, // Remove teamMember object as it's not needed in the request
+      }));
+
+      await updateFieldingLineup(teamId!, selectedGame!.id, cleanedLineup);
+      setFieldingLineup([...editableFieldingLineup]);
+      setEditingFieldingLineup(false);
+      toast({
+        title: "Success",
+        description: "Fielding positions updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update fielding lineup",
+        variant: "destructive",
+      });
+    }
   };
 
   const cancelEditingFieldingLineup = () => {

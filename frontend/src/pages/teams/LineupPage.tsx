@@ -42,6 +42,7 @@ import {
   generateBattingOrder,
   getAttendance,
   updateFieldingLineup,
+  updateBattingOrder,
   type BattingOrder,
   type FieldingLineup,
   type Game,
@@ -496,14 +497,37 @@ const LineupPage: React.FC = () => {
     setEditableBattingOrder([...battingOrder]);
   };
 
-  const saveBattingOrder = () => {
-    setBattingOrder([...editableBattingOrder]);
-    setEditingBattingOrder(false);
-    toast({
-      title: "Success",
-      description: "Batting order updated successfully",
-    });
-    // TODO: Add API call to save to backend
+  const saveBattingOrder = async () => {
+    try {
+      // Clean up the data before sending - remove teamMember objects
+      const cleanedBattingOrder = editableBattingOrder.map((order) => ({
+        ...order,
+        teamMember: undefined, // Remove teamMember object as it's not needed in the request
+      }));
+
+      await updateBattingOrder(teamId!, selectedGame!.id, cleanedBattingOrder);
+
+      // Reload the fresh batting order data from backend
+      const [batting, attendanceData] = await Promise.all([
+        getBattingOrder(teamId!, selectedGame!.id),
+        getAttendance(teamId!, selectedGame!.id),
+      ]);
+
+      setBattingOrder(batting);
+      setEditableBattingOrder(batting);
+      setAttendance(attendanceData);
+      setEditingBattingOrder(false);
+      toast({
+        title: "Success",
+        description: "Batting order updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update batting order",
+        variant: "destructive",
+      });
+    }
   };
 
   const cancelEditingBattingOrder = () => {

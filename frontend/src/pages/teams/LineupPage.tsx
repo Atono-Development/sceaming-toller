@@ -594,20 +594,6 @@ const LineupPage: React.FC = () => {
     setEditingFieldingLineup(false);
   };
 
-  const positions = [
-    "Pitcher",
-    "C",
-    "1B",
-    "2B",
-    "3B",
-    "SS",
-    "LF",
-    "CF",
-    "RF",
-    "Rover",
-    "Bench",
-  ];
-
   const updatePlayerAssignment = (playerId: string, newPlayerId: string) => {
     setEditableFieldingLineup((players) =>
       players.map((player) =>
@@ -653,53 +639,6 @@ const LineupPage: React.FC = () => {
     });
 
     return positionsByInning;
-  };
-
-  const validatePositionAssignment = (
-    playerId: string,
-    newPosition: string,
-    currentInning: number
-  ) => {
-    if (newPosition === "Bench") return true; // Bench can have multiple players
-
-    const currentAssignment = editableFieldingLineup.find(
-      (p) => p.id === playerId
-    );
-    if (!currentAssignment) return true;
-
-    // Check if another player already has this position in the same inning
-    const duplicatePosition = editableFieldingLineup.find(
-      (p) =>
-        p.id !== playerId &&
-        p.inning === currentInning &&
-        p.position === newPosition
-    );
-
-    if (duplicatePosition) {
-      toast({
-        title: "Invalid Assignment",
-        description: `Position ${newPosition} is already assigned to another player in inning ${currentInning}`,
-        variant: "destructive",
-      });
-      return false;
-    }
-
-    return true;
-  };
-
-  const updatePlayerPosition = (playerId: string, newPosition: string) => {
-    const player = editableFieldingLineup.find((p) => p.id === playerId);
-    if (!player) return;
-
-    if (!validatePositionAssignment(playerId, newPosition, player.inning)) {
-      return;
-    }
-
-    setEditableFieldingLineup((players) =>
-      players.map((p) =>
-        p.id === playerId ? { ...p, position: newPosition } : p
-      )
-    );
   };
 
   if (!teamId || !currentTeam) {
@@ -967,29 +906,13 @@ const LineupPage: React.FC = () => {
                                   >
                                     {editingFieldingLineup ? (
                                       <div className="flex items-center gap-2">
-                                        <Select
-                                          value={player.position}
-                                          onValueChange={(value) =>
-                                            updatePlayerPosition(
-                                              player.id,
-                                              value
-                                            )
-                                          }
+                                        <Badge
+                                          className={getPositionColor(
+                                            player.position
+                                          )}
                                         >
-                                          <SelectTrigger className="w-20">
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            {positions.map((position) => (
-                                              <SelectItem
-                                                key={position}
-                                                value={position}
-                                              >
-                                                {position}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
+                                          {player.position}
+                                        </Badge>
                                         <Select
                                           value={player.teamMemberId || ""}
                                           onValueChange={(value) =>

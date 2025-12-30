@@ -276,9 +276,42 @@ const LineupPage: React.FC = () => {
   const generateAllInnings = async () => {
     if (!selectedGame) return;
 
+    const maxRetries = 9;
+    let retryCount = 0;
+    let lastError: any = null;
+
+    const generateWithRetry = async (): Promise<void> => {
+      try {
+        await generateCompleteFieldingLineup(teamId!, selectedGame.id);
+      } catch (error: any) {
+        lastError = error;
+
+        // Check if this is a 500 error with the specific messages we want to retry
+        const isRetryableError =
+          error?.response?.status === 500 &&
+          (error?.response?.data?.includes?.("cannot achieve 5-4 split") ||
+            error?.response?.data?.includes?.("not enough players available"));
+
+        if (isRetryableError && retryCount < maxRetries) {
+          retryCount++;
+          console.log(
+            `Retrying lineup generation (attempt ${retryCount}/${maxRetries}) due to: ${error?.response?.data}`
+          );
+
+          // Add a small delay before retrying (optional but can help)
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          return generateWithRetry();
+        }
+
+        // If we've exhausted retries or it's not a retry-able error, throw the error
+        throw error;
+      }
+    };
+
     try {
       setLoading(true);
-      await generateCompleteFieldingLineup(teamId!, selectedGame.id);
+      await generateWithRetry();
 
       // Load the fresh lineup data
       const [batting, fielding, attendanceData] = await Promise.all([
@@ -293,27 +326,36 @@ const LineupPage: React.FC = () => {
       setEditableFieldingLineup(fielding);
       setAttendance(attendanceData);
 
-      // After generating lineup, automatically assign unassigned players to bench
+      // After generating lineup, automatically add bench assignments using the same logic as addBenchAssignments
       const availablePlayers = attendanceData
         .filter((a) => a.status === "going")
         .map((a) => a.teamMember);
 
-      const assignedPlayerIds = new Set(
-        fielding
-          .filter((p) => p.position !== "Bench")
-          .map((p) => p.teamMemberId)
-      );
+      const benchAssignments: FieldingLineup[] = [];
 
-      const unassignedPlayers = availablePlayers.filter(
-        (player) => player?.id && !assignedPlayerIds.has(player.id)
-      );
+      availablePlayers.forEach((player) => {
+        if (!player?.id) return;
 
-      if (unassignedPlayers.length > 0) {
-        // Create bench assignments for all 7 innings
-        const benchAssignments: FieldingLineup[] = [];
-        unassignedPlayers.forEach((player) => {
-          if (player?.id) {
-            for (let inning = 1; inning <= 7; inning++) {
+        for (let inning = 1; inning <= 7; inning++) {
+          // Check if the player is already assigned to a fielding position (not Bench) for this inning
+          const isFielding = fielding.some(
+            (p) =>
+              p.teamMemberId === player.id &&
+              p.inning === inning &&
+              p.position !== "Bench"
+          );
+
+          // If the player is NOT fielding, check if they need a bench assignment
+          if (!isFielding) {
+            const existingBench = fielding.find(
+              (p) =>
+                p.teamMemberId === player.id &&
+                p.inning === inning &&
+                p.position === "Bench"
+            );
+
+            // If no bench assignment exists, create one
+            if (!existingBench) {
               benchAssignments.push({
                 id: `bench-${player.id}-${inning}`,
                 gameId: selectedGame.id,
@@ -329,45 +371,79 @@ const LineupPage: React.FC = () => {
               });
             }
           }
+        }
+      });
+
+      // Update both the main lineup and editable lineup
+      const updatedLineup = [...fielding, ...benchAssignments];
+      setFieldingLineup(updatedLineup);
+      setEditableFieldingLineup(updatedLineup);
+      setBattingOrder(batting);
+      setEditableBattingOrder(batting);
+      setAttendance(attendanceData);
+
+      // Save the complete lineup (including bench assignments) to backend
+      try {
+        const cleanedLineup = updatedLineup.map((lineup) => ({
+          ...lineup,
+          id: lineup.id.startsWith("bench-") ? "" : lineup.id, // Remove temporary bench IDs
+          teamMember: undefined, // Remove teamMember object as it's not needed in the request
+        }));
+        await updateFieldingLineup(teamId!, selectedGame.id, cleanedLineup);
+
+        // Reload the fresh lineup data from backend to get proper IDs
+        const [freshFielding, freshAttendanceData] = await Promise.all([
+          getFieldingLineup(teamId!, selectedGame.id),
+          getAttendance(teamId!, selectedGame.id),
+        ]);
+
+        setFieldingLineup(freshFielding);
+        setEditableFieldingLineup(freshFielding);
+        setAttendance(freshAttendanceData);
+      } catch (saveError) {
+        console.error("Error saving bench assignments:", saveError);
+        toast({
+          title: "Warning",
+          description:
+            "Bench assignments created but failed to save to backend",
+          variant: "destructive",
         });
+      }
 
-        // Update both the main lineup and editable lineup
-        const updatedLineup = [...fielding, ...benchAssignments];
-        setFieldingLineup(updatedLineup);
-        setEditableFieldingLineup(updatedLineup);
-        setBattingOrder(batting);
-        setEditableBattingOrder(batting);
-        setAttendance(attendanceData);
-
+      if (benchAssignments.length > 0) {
         toast({
           title: "Players Assigned to Bench",
-          description: `${unassignedPlayers.length} player(s) automatically assigned to bench for all innings`,
+          description: `${benchAssignments.length} bench assignment(s) added for all innings`,
         });
       } else {
-        // Still update the state even if no bench assignments
-        setFieldingLineup(fielding);
-        setEditableFieldingLineup(fielding);
-        setBattingOrder(batting);
-        setEditableBattingOrder(batting);
-        setAttendance(attendanceData);
-
         toast({
           title: "All Players Assigned",
           description:
-            "All available players are already assigned to fielding positions",
+            "All players already have fielding or bench assignments for all innings",
         });
       }
 
       toast({
         title: "Success",
         description:
-          "Generated complete 7-inning fielding lineup with balanced playing time",
+          retryCount > 0
+            ? `Generated complete 7-inning fielding lineup with balanced playing time (succeeded after ${retryCount} retries)`
+            : "Generated complete 7-inning fielding lineup with balanced playing time",
       });
     } catch (error) {
       console.error("Error generating lineup:", error);
+
+      // Check if this was a retry scenario that failed
+      const wasRetryScenario = retryCount > 0;
+      const errorMessage = wasRetryScenario
+        ? `Failed to generate complete lineup after ${retryCount} retries. Last error: ${
+            lastError?.response?.data || "Unknown error"
+          }`
+        : "Failed to generate complete lineup";
+
       toast({
         title: "Error",
-        description: "Failed to generate complete lineup",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -594,20 +670,6 @@ const LineupPage: React.FC = () => {
     setEditingFieldingLineup(false);
   };
 
-  const positions = [
-    "Pitcher",
-    "C",
-    "1B",
-    "2B",
-    "3B",
-    "SS",
-    "LF",
-    "CF",
-    "RF",
-    "Rover",
-    "Bench",
-  ];
-
   const updatePlayerAssignment = (playerId: string, newPlayerId: string) => {
     setEditableFieldingLineup((players) =>
       players.map((player) =>
@@ -653,53 +715,6 @@ const LineupPage: React.FC = () => {
     });
 
     return positionsByInning;
-  };
-
-  const validatePositionAssignment = (
-    playerId: string,
-    newPosition: string,
-    currentInning: number
-  ) => {
-    if (newPosition === "Bench") return true; // Bench can have multiple players
-
-    const currentAssignment = editableFieldingLineup.find(
-      (p) => p.id === playerId
-    );
-    if (!currentAssignment) return true;
-
-    // Check if another player already has this position in the same inning
-    const duplicatePosition = editableFieldingLineup.find(
-      (p) =>
-        p.id !== playerId &&
-        p.inning === currentInning &&
-        p.position === newPosition
-    );
-
-    if (duplicatePosition) {
-      toast({
-        title: "Invalid Assignment",
-        description: `Position ${newPosition} is already assigned to another player in inning ${currentInning}`,
-        variant: "destructive",
-      });
-      return false;
-    }
-
-    return true;
-  };
-
-  const updatePlayerPosition = (playerId: string, newPosition: string) => {
-    const player = editableFieldingLineup.find((p) => p.id === playerId);
-    if (!player) return;
-
-    if (!validatePositionAssignment(playerId, newPosition, player.inning)) {
-      return;
-    }
-
-    setEditableFieldingLineup((players) =>
-      players.map((p) =>
-        p.id === playerId ? { ...p, position: newPosition } : p
-      )
-    );
   };
 
   if (!teamId || !currentTeam) {
@@ -967,29 +982,13 @@ const LineupPage: React.FC = () => {
                                   >
                                     {editingFieldingLineup ? (
                                       <div className="flex items-center gap-2">
-                                        <Select
-                                          value={player.position}
-                                          onValueChange={(value) =>
-                                            updatePlayerPosition(
-                                              player.id,
-                                              value
-                                            )
-                                          }
+                                        <Badge
+                                          className={getPositionColor(
+                                            player.position
+                                          )}
                                         >
-                                          <SelectTrigger className="w-20">
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            {positions.map((position) => (
-                                              <SelectItem
-                                                key={position}
-                                                value={position}
-                                              >
-                                                {position}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
+                                          {player.position}
+                                        </Badge>
                                         <Select
                                           value={player.teamMemberId || ""}
                                           onValueChange={(value) =>

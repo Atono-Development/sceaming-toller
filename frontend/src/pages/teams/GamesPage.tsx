@@ -3,7 +3,12 @@ import { Link, useParams } from "react-router-dom";
 import { Plus, Edit, Trash2, Trophy } from "lucide-react";
 import { format } from "date-fns";
 import { getTeamGames } from "../../lib/api";
-import { deleteGame } from "../../api/games";
+import {
+  deleteGame,
+  getAttendance,
+  updateAttendance,
+  type Attendance,
+} from "../../api/games";
 import { Button } from "../../components/ui/button";
 import {
   Card,
@@ -11,12 +16,8 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
 import { useTeamContext } from "../../contexts/TeamContext";
-import {
-  getAttendance,
-  updateAttendance,
-  type Attendance,
-} from "../../api/games";
 import { useAuth } from "../../contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { utcToLocalDate, getTodayAtMidnight } from "../../utils/dateUtils";
@@ -29,6 +30,12 @@ export function GamesPage() {
   const [attendanceStates, setAttendanceStates] = useState<
     Record<string, Attendance | null>
   >({});
+  const [gameAttendance, setGameAttendance] = useState<
+    Record<string, Attendance[]>
+  >({});
+  const [expandedGames, setExpandedGames] = useState<Record<string, boolean>>(
+    {}
+  );
 
   const deleteGameMutation = useMutation({
     mutationFn: (gameId: string) => deleteGame(teamId!, gameId),
@@ -56,6 +63,10 @@ export function GamesPage() {
         ...prev,
         [gameId]: myAttendance || null,
       }));
+      setGameAttendance((prev) => ({
+        ...prev,
+        [gameId]: attendanceData,
+      }));
     } catch (error) {
       console.error("Failed to fetch attendance:", error);
     }
@@ -74,8 +85,43 @@ export function GamesPage() {
           updatedAt: new Date().toISOString(),
         },
       }));
+      // Refresh attendance data for this game
+      fetchAttendanceForGame(gameId);
     } catch (error) {
       console.error("Failed to update attendance:", error);
+    }
+  };
+
+  const toggleGameExpansion = (gameId: string) => {
+    setExpandedGames((prev) => ({
+      ...prev,
+      [gameId]: !prev[gameId],
+    }));
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "going":
+        return "bg-green-500 hover:bg-green-600";
+      case "maybe":
+        return "bg-yellow-500 hover:bg-yellow-600";
+      case "not_going":
+        return "bg-red-500 hover:bg-red-600";
+      default:
+        return "bg-gray-500 hover:bg-gray-600";
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "going":
+        return "Going";
+      case "maybe":
+        return "Maybe";
+      case "not_going":
+        return "Not Going";
+      default:
+        return "Unknown";
     }
   };
 
@@ -178,8 +224,49 @@ export function GamesPage() {
                   <div className="text-sm text-muted-foreground">
                     Location: {game.location}
                   </div>
-                  <div className="mt-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
-                    {game.status}
+
+                  {/* Team Attendance List */}
+                  <div className="mt-2 space-y-1">
+                    {expandedGames[game.id]
+                      ? gameAttendance[game.id]?.map((att) => (
+                          <div
+                            key={att.id}
+                            className="inline-flex items-center gap-1 mr-2 mb-1"
+                          >
+                            <Badge
+                              className={`text-xs ${getStatusColor(
+                                att.status
+                              )} text-white border-0`}
+                            >
+                              {att.teamMember?.user?.name || "Unknown"}
+                            </Badge>
+                          </div>
+                        ))
+                      : gameAttendance[game.id]?.slice(0, 3).map((att) => (
+                          <div
+                            key={att.id}
+                            className="inline-flex items-center gap-1 mr-2 mb-1"
+                          >
+                            <Badge
+                              className={`text-xs ${getStatusColor(
+                                att.status
+                              )} text-white border-0`}
+                            >
+                              {att.teamMember?.user?.name || "Unknown"}
+                            </Badge>
+                          </div>
+                        ))}
+                    {gameAttendance[game.id] &&
+                      gameAttendance[game.id].length > 3 && (
+                        <button
+                          onClick={() => toggleGameExpansion(game.id)}
+                          className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 underline ml-2"
+                        >
+                          {expandedGames[game.id]
+                            ? "Show less"
+                            : `+${gameAttendance[game.id].length - 3} more`}
+                        </button>
+                      )}
                   </div>
 
                   {/* Score Display */}
@@ -308,8 +395,49 @@ export function GamesPage() {
                   <div className="text-sm text-muted-foreground">
                     Location: {game.location}
                   </div>
-                  <div className="mt-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
-                    {game.status}
+
+                  {/* Team Attendance List */}
+                  <div className="mt-2 space-y-1">
+                    {expandedGames[game.id]
+                      ? gameAttendance[game.id]?.map((att) => (
+                          <div
+                            key={att.id}
+                            className="inline-flex items-center gap-1 mr-2 mb-1"
+                          >
+                            <Badge
+                              className={`text-xs ${getStatusColor(
+                                att.status
+                              )} text-white border-0`}
+                            >
+                              {att.teamMember?.user?.name || "Unknown"}
+                            </Badge>
+                          </div>
+                        ))
+                      : gameAttendance[game.id]?.slice(0, 3).map((att) => (
+                          <div
+                            key={att.id}
+                            className="inline-flex items-center gap-1 mr-2 mb-1"
+                          >
+                            <Badge
+                              className={`text-xs ${getStatusColor(
+                                att.status
+                              )} text-white border-0`}
+                            >
+                              {att.teamMember?.user?.name || "Unknown"}
+                            </Badge>
+                          </div>
+                        ))}
+                    {gameAttendance[game.id] &&
+                      gameAttendance[game.id].length > 3 && (
+                        <button
+                          onClick={() => toggleGameExpansion(game.id)}
+                          className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 underline ml-2"
+                        >
+                          {expandedGames[game.id]
+                            ? "Show less"
+                            : `+${gameAttendance[game.id].length - 3} more`}
+                        </button>
+                      )}
                   </div>
 
                   {/* Score Display */}

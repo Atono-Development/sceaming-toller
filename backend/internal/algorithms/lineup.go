@@ -475,9 +475,16 @@ func generateBalancedInningLineup(gameID uuid.UUID, inning int, confirmed []mode
 			// Check if this position is in member's preferences
 			prefRank := getPreferenceRank(member, pos)
 			if prefRank > 0 && prefRank < bestPriority {
-				// Also consider playing time balance
+				// Check if player can still play more innings
+				// Only limit innings if we have enough players to rotate
+				totalPlayers := len(confirmed)
+				maxInnings := 7 // Default to full game
+				if totalPlayers >= 11 {
+					maxInnings = 6 // Limit to 6 innings only if we have enough players
+				}
+				
 				inningsPlayed := playerTracks[member.ID].InningsPlayed
-				if inningsPlayed < 6 { // Don't exceed 6 innings for any player
+				if inningsPlayed < maxInnings {
 					bestPlayer = &selected[i]
 					bestPriority = prefRank
 				}
@@ -517,7 +524,14 @@ func generateBalancedInningLineup(gameID uuid.UUID, inning int, confirmed []mode
 			}
 
 			inningsPlayed := playerTracks[member.ID].InningsPlayed
-			if inningsPlayed < minInnings && inningsPlayed < 6 {
+			// Only limit innings if we have enough players to rotate
+			totalPlayers := len(confirmed)
+			maxInnings := 7 // Default to full game
+			if totalPlayers >= 11 {
+				maxInnings = 6 // Limit to 6 innings only if we have enough players
+			}
+			
+			if inningsPlayed < minInnings && inningsPlayed < maxInnings {
 				minInnings = inningsPlayed
 				bestPlayer = &selected[i]
 			}
@@ -560,9 +574,16 @@ func selectBalancedTeam(sortedPlayers []models.TeamMember, playerTracks map[uuid
 	males := make([]models.TeamMember, 0)
 	females := make([]models.TeamMember, 0)
 
-	// Separate by gender and filter out players who've already played 6+ innings
+	// Separate by gender and filter out players who've already exceeded their max innings
 	for _, member := range sortedPlayers {
-		if playerTracks[member.ID].InningsPlayed >= 6 {
+		// Only limit innings if we have enough players to rotate
+		totalPlayers := len(sortedPlayers)
+		maxInnings := 7 // Default to full game
+		if totalPlayers >= 11 {
+			maxInnings = 6 // Limit to 6 innings only if we have enough players
+		}
+		
+		if playerTracks[member.ID].InningsPlayed >= maxInnings {
 			continue
 		}
 		if member.Gender == "M" {

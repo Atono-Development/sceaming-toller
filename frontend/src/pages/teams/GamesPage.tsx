@@ -33,6 +33,9 @@ export function GamesPage() {
   const [gameAttendance, setGameAttendance] = useState<
     Record<string, Attendance[]>
   >({});
+  const [expandedGames, setExpandedGames] = useState<Record<string, boolean>>(
+    {}
+  );
 
   const deleteGameMutation = useMutation({
     mutationFn: (gameId: string) => deleteGame(teamId!, gameId),
@@ -87,6 +90,13 @@ export function GamesPage() {
     } catch (error) {
       console.error("Failed to update attendance:", error);
     }
+  };
+
+  const toggleGameExpansion = (gameId: string) => {
+    setExpandedGames((prev) => ({
+      ...prev,
+      [gameId]: !prev[gameId],
+    }));
   };
 
   const getStatusColor = (status: string) => {
@@ -217,30 +227,51 @@ export function GamesPage() {
 
                   {/* Team Attendance List */}
                   <div className="mt-2 space-y-1">
-                    {gameAttendance[game.id]?.slice(0, 3).map((att) => (
-                      <div
-                        key={att.id}
-                        className="inline-flex items-center gap-1 mr-2 mb-1"
-                      >
-                        <span className="text-xs font-medium">
-                          {att.teamMember?.user?.name || "Unknown"}
-                        </span>
-                        <Badge
-                          className={`text-xs ${getStatusColor(
-                            att.status
-                          )} text-white border-0`}
-                        >
-                          {getStatusText(att.status)}
-                        </Badge>
-                      </div>
-                    ))}
+                    {expandedGames[game.id]
+                      ? gameAttendance[game.id]?.map((att) => (
+                          <div
+                            key={att.id}
+                            className="inline-flex items-center gap-1 mr-2 mb-1"
+                          >
+                            <span className="text-xs font-medium">
+                              {att.teamMember?.user?.name || "Unknown"}
+                            </span>
+                            <Badge
+                              className={`text-xs ${getStatusColor(
+                                att.status
+                              )} text-white border-0`}
+                            >
+                              {getStatusText(att.status)}
+                            </Badge>
+                          </div>
+                        ))
+                      : gameAttendance[game.id]?.slice(0, 3).map((att) => (
+                          <div
+                            key={att.id}
+                            className="inline-flex items-center gap-1 mr-2 mb-1"
+                          >
+                            <span className="text-xs font-medium">
+                              {att.teamMember?.user?.name || "Unknown"}
+                            </span>
+                            <Badge
+                              className={`text-xs ${getStatusColor(
+                                att.status
+                              )} text-white border-0`}
+                            >
+                              {getStatusText(att.status)}
+                            </Badge>
+                          </div>
+                        ))}
                     {gameAttendance[game.id] &&
                       gameAttendance[game.id].length > 3 && (
-                        <div className="inline-flex items-center">
-                          <span className="text-xs text-muted-foreground">
-                            +{gameAttendance[game.id].length - 3} more
-                          </span>
-                        </div>
+                        <button
+                          onClick={() => toggleGameExpansion(game.id)}
+                          className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 underline ml-2"
+                        >
+                          {expandedGames[game.id]
+                            ? "Show less"
+                            : `+${gameAttendance[game.id].length - 3} more`}
+                        </button>
                       )}
                   </div>
 
@@ -373,30 +404,51 @@ export function GamesPage() {
 
                   {/* Team Attendance List */}
                   <div className="mt-2 space-y-1">
-                    {gameAttendance[game.id]?.slice(0, 3).map((att) => (
-                      <div
-                        key={att.id}
-                        className="inline-flex items-center gap-1 mr-2 mb-1"
-                      >
-                        <span className="text-xs font-medium">
-                          {att.teamMember?.user?.name || "Unknown"}
-                        </span>
-                        <Badge
-                          className={`text-xs ${getStatusColor(
-                            att.status
-                          )} text-white border-0`}
-                        >
-                          {getStatusText(att.status)}
-                        </Badge>
-                      </div>
-                    ))}
+                    {expandedGames[game.id]
+                      ? gameAttendance[game.id]?.map((att) => (
+                          <div
+                            key={att.id}
+                            className="inline-flex items-center gap-1 mr-2 mb-1"
+                          >
+                            <span className="text-xs font-medium">
+                              {att.teamMember?.user?.name || "Unknown"}
+                            </span>
+                            <Badge
+                              className={`text-xs ${getStatusColor(
+                                att.status
+                              )} text-white border-0`}
+                            >
+                              {getStatusText(att.status)}
+                            </Badge>
+                          </div>
+                        ))
+                      : gameAttendance[game.id]?.slice(0, 3).map((att) => (
+                          <div
+                            key={att.id}
+                            className="inline-flex items-center gap-1 mr-2 mb-1"
+                          >
+                            <span className="text-xs font-medium">
+                              {att.teamMember?.user?.name || "Unknown"}
+                            </span>
+                            <Badge
+                              className={`text-xs ${getStatusColor(
+                                att.status
+                              )} text-white border-0`}
+                            >
+                              {getStatusText(att.status)}
+                            </Badge>
+                          </div>
+                        ))}
                     {gameAttendance[game.id] &&
                       gameAttendance[game.id].length > 3 && (
-                        <div className="inline-flex items-center">
-                          <span className="text-xs text-muted-foreground">
-                            +{gameAttendance[game.id].length - 3} more
-                          </span>
-                        </div>
+                        <button
+                          onClick={() => toggleGameExpansion(game.id)}
+                          className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 underline ml-2"
+                        >
+                          {expandedGames[game.id]
+                            ? "Show less"
+                            : `+${gameAttendance[game.id].length - 3} more`}
+                        </button>
                       )}
                   </div>
 

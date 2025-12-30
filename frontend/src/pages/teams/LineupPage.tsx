@@ -276,9 +276,42 @@ const LineupPage: React.FC = () => {
   const generateAllInnings = async () => {
     if (!selectedGame) return;
 
+    const maxRetries = 9;
+    let retryCount = 0;
+    let lastError: any = null;
+
+    const generateWithRetry = async (): Promise<void> => {
+      try {
+        await generateCompleteFieldingLineup(teamId!, selectedGame.id);
+      } catch (error: any) {
+        lastError = error;
+
+        // Check if this is a 500 error with the specific messages we want to retry
+        const isRetryableError =
+          error?.response?.status === 500 &&
+          (error?.response?.data?.includes?.("cannot achieve 5-4 split") ||
+            error?.response?.data?.includes?.("not enough players available"));
+
+        if (isRetryableError && retryCount < maxRetries) {
+          retryCount++;
+          console.log(
+            `Retrying lineup generation (attempt ${retryCount}/${maxRetries}) due to: ${error?.response?.data}`
+          );
+
+          // Add a small delay before retrying (optional but can help)
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          return generateWithRetry();
+        }
+
+        // If we've exhausted retries or it's not a retry-able error, throw the error
+        throw error;
+      }
+    };
+
     try {
       setLoading(true);
-      await generateCompleteFieldingLineup(teamId!, selectedGame.id);
+      await generateWithRetry();
 
       // Load the fresh lineup data
       const [batting, fielding, attendanceData] = await Promise.all([
@@ -393,13 +426,24 @@ const LineupPage: React.FC = () => {
       toast({
         title: "Success",
         description:
-          "Generated complete 7-inning fielding lineup with balanced playing time",
+          retryCount > 0
+            ? `Generated complete 7-inning fielding lineup with balanced playing time (succeeded after ${retryCount} retries)`
+            : "Generated complete 7-inning fielding lineup with balanced playing time",
       });
     } catch (error) {
       console.error("Error generating lineup:", error);
+
+      // Check if this was a retry scenario that failed
+      const wasRetryScenario = retryCount > 0;
+      const errorMessage = wasRetryScenario
+        ? `Failed to generate complete lineup after ${retryCount} retries. Last error: ${
+            lastError?.response?.data || "Unknown error"
+          }`
+        : "Failed to generate complete lineup";
+
       toast({
         title: "Error",
-        description: "Failed to generate complete lineup",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

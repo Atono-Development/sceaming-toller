@@ -233,15 +233,12 @@ export function GamesPage() {
                             key={att.id}
                             className="inline-flex items-center gap-1 mr-2 mb-1"
                           >
-                            <span className="text-xs font-medium">
-                              {att.teamMember?.user?.name || "Unknown"}
-                            </span>
                             <Badge
                               className={`text-xs ${getStatusColor(
                                 att.status
                               )} text-white border-0`}
                             >
-                              {getStatusText(att.status)}
+                              {att.teamMember?.user?.name || "Unknown"}
                             </Badge>
                           </div>
                         ))
@@ -250,15 +247,12 @@ export function GamesPage() {
                             key={att.id}
                             className="inline-flex items-center gap-1 mr-2 mb-1"
                           >
-                            <span className="text-xs font-medium">
-                              {att.teamMember?.user?.name || "Unknown"}
-                            </span>
                             <Badge
                               className={`text-xs ${getStatusColor(
                                 att.status
                               )} text-white border-0`}
                             >
-                              {getStatusText(att.status)}
+                              {att.teamMember?.user?.name || "Unknown"}
                             </Badge>
                           </div>
                         ))}
@@ -410,15 +404,12 @@ export function GamesPage() {
                             key={att.id}
                             className="inline-flex items-center gap-1 mr-2 mb-1"
                           >
-                            <span className="text-xs font-medium">
-                              {att.teamMember?.user?.name || "Unknown"}
-                            </span>
                             <Badge
                               className={`text-xs ${getStatusColor(
                                 att.status
                               )} text-white border-0`}
                             >
-                              {getStatusText(att.status)}
+                              {att.teamMember?.user?.name || "Unknown"}
                             </Badge>
                           </div>
                         ))
@@ -427,15 +418,12 @@ export function GamesPage() {
                             key={att.id}
                             className="inline-flex items-center gap-1 mr-2 mb-1"
                           >
-                            <span className="text-xs font-medium">
-                              {att.teamMember?.user?.name || "Unknown"}
-                            </span>
                             <Badge
                               className={`text-xs ${getStatusColor(
                                 att.status
                               )} text-white border-0`}
                             >
-                              {getStatusText(att.status)}
+                              {att.teamMember?.user?.name || "Unknown"}
                             </Badge>
                           </div>
                         ))}

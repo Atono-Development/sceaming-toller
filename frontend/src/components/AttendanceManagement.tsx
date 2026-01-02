@@ -233,50 +233,50 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
             )}
           </div>
 
-          {attendance.length === 1 && isAdmin ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">
-                No attendance records found. Initialize attendance for all team
-                members.
-              </p>
-              <Button onClick={handleInitializeAttendance} disabled={saving}>
-                {saving ? "Initializing..." : "Initialize Attendance"}
+          <div className="space-y-2">
+            {attendance.map((att) => (
+              <div
+                key={att.id}
+                className="flex items-center justify-between p-2 rounded border"
+              >
+                <span className="font-medium">
+                  {att.teamMember?.user?.name || "Unknown Player"}
+                </span>
+                {isAdmin ? (
+                  <Select
+                    value={att.status}
+                    onValueChange={(status) =>
+                      handleAdminAttendanceChange(att.teamMemberId, status)
+                    }
+                    disabled={saving}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="going">Going</SelectItem>
+                      <SelectItem value="maybe">Maybe</SelectItem>
+                      <SelectItem value="not_going">Not Going</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Badge className={getStatusColor(att.status)}>
+                    {getStatusText(att.status)}
+                  </Badge>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {isAdmin && (
+            <div className="text-center py-4">
+              <Button
+                onClick={handleInitializeAttendance}
+                disabled={saving}
+                variant="outline"
+              >
+                {saving ? "Initializing..." : "Initialize Missing Attendance"}
               </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {attendance.map((att) => (
-                <div
-                  key={att.id}
-                  className="flex items-center justify-between p-2 rounded border"
-                >
-                  <span className="font-medium">
-                    {att.teamMember?.user?.name || "Unknown Player"}
-                  </span>
-                  {isAdmin ? (
-                    <Select
-                      value={att.status}
-                      onValueChange={(status) =>
-                        handleAdminAttendanceChange(att.teamMemberId, status)
-                      }
-                      disabled={saving}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="going">Going</SelectItem>
-                        <SelectItem value="maybe">Maybe</SelectItem>
-                        <SelectItem value="not_going">Not Going</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Badge className={getStatusColor(att.status)}>
-                      {getStatusText(att.status)}
-                    </Badge>
-                  )}
-                </div>
-              ))}
             </div>
           )}
         </div>

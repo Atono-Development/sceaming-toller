@@ -276,7 +276,7 @@ const LineupPage: React.FC = () => {
   const generateAllInnings = async () => {
     if (!selectedGame) return;
 
-    const maxRetries = 9;
+    const maxRetries = 2;
     let retryCount = 0;
     let lastError: any = null;
 

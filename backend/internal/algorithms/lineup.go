@@ -265,14 +265,17 @@ func GenerateFieldingLineup(gameID uuid.UUID, inning int) ([]models.FieldingLine
 	males := filterByGender(confirmed, "M")
 	females := filterByGender(confirmed, "F")
 
-	// 3. Select 9 with 5-4 split
+	// 3. Select 9 with 5-4 split, choosing strategy based on availability
 	var selected []models.TeamMember
-	if len(males) >= 5 && len(females) >= 4 {
+	if len(females) > len(males) && len(females) >= 5 && len(males) >= 4 {
+		selected = append(selectN(females, 5), selectN(males, 4)...)
+	} else if len(males) >= 5 && len(females) >= 4 {
 		selected = append(selectN(males, 5), selectN(females, 4)...)
 	} else if len(females) >= 5 && len(males) >= 4 {
+		// Fallback to 5F/4M if 5M/4F not possible but 5F/4M is
 		selected = append(selectN(females, 5), selectN(males, 4)...)
 	} else {
-		return nil, errors.New("cannot achieve 5-4 split")
+		return nil, errors.New("cannot achieve 5-4 split with available players")
 	}
 
 	positions := []string{"C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "Rover"}
@@ -412,7 +415,19 @@ func GenerateCompleteFieldingLineup(gameID uuid.UUID) ([]models.FieldingLineup, 
 	positions := []string{"C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "Rover"}
 
 	for inning := 1; inning <= 7; inning++ {
-		lineup, err := generateBalancedInningLineup(gameID, inning, confirmed, playerTracks, positions)
+		numMales := len(males)
+		numFemales := len(females)
+
+		// Choose the gender split strategy (5-4 or 4-5)
+		// 5M/4F is preferred, but 4M/5F is used if females significantly outnumber males
+		targetM := 5
+		targetF := 4
+		if numFemales > numMales && numFemales >= 5 {
+			targetM = 4
+			targetF = 5
+		}
+
+		lineup, err := generateBalancedInningLineup(gameID, inning, confirmed, playerTracks, positions, numMales, numFemales, targetM, targetF)
 		if err != nil {
 			return nil, err
 		}
@@ -424,7 +439,7 @@ func GenerateCompleteFieldingLineup(gameID uuid.UUID) ([]models.FieldingLineup, 
 
 // generateBalancedInningLineup generates a single inning lineup trying to balance playing time
 func generateBalancedInningLineup(gameID uuid.UUID, inning int, confirmed []models.TeamMember, 
-	playerTracks map[uuid.UUID]*PlayerInningTrack, positions []string) ([]models.FieldingLineup, error) {
+	playerTracks map[uuid.UUID]*PlayerInningTrack, positions []string, numMales, numFemales, targetM, targetF int) ([]models.FieldingLineup, error) {
 	
 	// Sort players by innings played (ascending) to prioritize those who've played less
 	sortedPlayers := make([]models.TeamMember, len(confirmed))
@@ -446,8 +461,8 @@ func generateBalancedInningLineup(gameID uuid.UUID, inning int, confirmed []mode
 		return sortedPlayers[i].ID.String() < sortedPlayers[j].ID.String()
 	})
 
-	// Select 9 players with 5-4 gender balance, prioritizing those who've played less
-	selected, err := selectBalancedTeam(sortedPlayers, playerTracks)
+	// Select 9 players with intended gender balance, prioritizing those who've played less
+	selected, err := selectBalancedTeam(sortedPlayers, playerTracks, numMales, numFemales, targetM, targetF)
 	if err != nil {
 		return nil, err
 	}
@@ -475,12 +490,10 @@ func generateBalancedInningLineup(gameID uuid.UUID, inning int, confirmed []mode
 			// Check if this position is in member's preferences
 			prefRank := getPreferenceRank(member, pos)
 			if prefRank > 0 && prefRank < bestPriority {
-				// Check if player can still play more innings
-				// Only limit innings if we have enough players to rotate
-				totalPlayers := len(confirmed)
-				maxInnings := 7 // Default to full game
-				if totalPlayers >= 11 {
-					maxInnings = 6 // Limit to 6 innings only if we have enough players
+				// Dynamic max innings based on targeted strategy
+				maxInnings := (targetM*7 + numMales - 1) / numMales
+				if member.Gender == "F" {
+					maxInnings = (targetF*7 + numFemales - 1) / numFemales
 				}
 				
 				inningsPlayed := playerTracks[member.ID].InningsPlayed
@@ -524,11 +537,10 @@ func generateBalancedInningLineup(gameID uuid.UUID, inning int, confirmed []mode
 			}
 
 			inningsPlayed := playerTracks[member.ID].InningsPlayed
-			// Only limit innings if we have enough players to rotate
-			totalPlayers := len(confirmed)
-			maxInnings := 7 // Default to full game
-			if totalPlayers >= 11 {
-				maxInnings = 6 // Limit to 6 innings only if we have enough players
+			// Dynamic max innings based on targeted strategy
+			maxInnings := (targetM*7 + numMales - 1) / numMales
+			if member.Gender == "F" {
+				maxInnings = (targetF*7 + numFemales - 1) / numFemales
 			}
 			
 			if inningsPlayed < minInnings && inningsPlayed < maxInnings {
@@ -569,18 +581,19 @@ func generateBalancedInningLineup(gameID uuid.UUID, inning int, confirmed []mode
 	return assignments, nil
 }
 
-// selectBalancedTeam selects 9 players with 5-4 gender balance from available players
-func selectBalancedTeam(sortedPlayers []models.TeamMember, playerTracks map[uuid.UUID]*PlayerInningTrack) ([]models.TeamMember, error) {
+// selectBalancedTeam selects 9 players with intended gender balance from available players
+func selectBalancedTeam(sortedPlayers []models.TeamMember, playerTracks map[uuid.UUID]*PlayerInningTrack, numMalesTotal, numFemalesTotal, targetM, targetF int) ([]models.TeamMember, error) {
 	males := make([]models.TeamMember, 0)
 	females := make([]models.TeamMember, 0)
 
+	maxM := (targetM*7 + numMalesTotal - 1) / numMalesTotal
+	maxF := (targetF*7 + numFemalesTotal - 1) / numFemalesTotal
+
 	// Separate by gender and filter out players who've already exceeded their max innings
 	for _, member := range sortedPlayers {
-		// Only limit innings if we have enough players to rotate
-		totalPlayers := len(sortedPlayers)
-		maxInnings := 7 // Default to full game
-		if totalPlayers >= 11 {
-			maxInnings = 6 // Limit to 6 innings only if we have enough players
+		maxInnings := maxM
+		if member.Gender == "F" {
+			maxInnings = maxF
 		}
 		
 		if playerTracks[member.ID].InningsPlayed >= maxInnings {
@@ -620,14 +633,21 @@ func selectBalancedTeam(sortedPlayers []models.TeamMember, playerTracks map[uuid
 		return nil, errors.New("not enough players available")
 	}
 	
-	// Strategy 1: Try 5 males, 4 females
-	if len(males) >= 5 && len(females) >= 4 {
-		selected = append(selectN(males, 5), selectN(females, 4)...)
-	} else if len(females) >= 5 && len(males) >= 4 {
-		// Strategy 2: Try 5 females, 4 males
-		selected = append(selectN(females, 5), selectN(males, 4)...)
+	// Try intended split first
+	if len(males) >= targetM && len(females) >= targetF {
+		selected = append(males[:targetM], females[:targetF]...)
 	} else {
-		return nil, errors.New("cannot achieve 5-4 gender split with available players")
+		// Fallback: try the other split if it works better (might happen if limits are reached)
+		altM, altF := 4, 5
+		if targetM == 4 {
+			altM, altF = 5, 4
+		}
+		
+		if len(males) >= altM && len(females) >= altF {
+			selected = append(males[:altM], females[:altF]...)
+		} else {
+			return nil, fmt.Errorf("cannot achieve required gender split: %d males, %d females available (target %d-%d)", len(males), len(females), targetM, targetF)
+		}
 	}
 
 	return selected, nil

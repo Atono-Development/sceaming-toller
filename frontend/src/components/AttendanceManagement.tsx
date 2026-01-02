@@ -8,10 +8,12 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
 import {
   getAttendance,
   updateAttendance,
   adminUpdateAttendance,
+  initializeGameAttendance,
   type Attendance,
   type Game,
 } from "../api/games";
@@ -113,6 +115,29 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
     }
   };
 
+  const handleInitializeAttendance = async () => {
+    setSaving(true);
+    try {
+      await initializeGameAttendance(teamId, game.id);
+
+      // Refresh attendance data
+      await loadAttendance();
+
+      toast({
+        title: "Success",
+        description: "Attendance initialized for all team members",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to initialize attendance",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "going":
@@ -207,40 +232,53 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
               </span>
             )}
           </div>
-          <div className="space-y-2">
-            {attendance.map((att) => (
-              <div
-                key={att.id}
-                className="flex items-center justify-between p-2 rounded border"
-              >
-                <span className="font-medium">
-                  {att.teamMember?.user?.name || "Unknown Player"}
-                </span>
-                {isAdmin ? (
-                  <Select
-                    value={att.status}
-                    onValueChange={(status) =>
-                      handleAdminAttendanceChange(att.teamMemberId, status)
-                    }
-                    disabled={saving}
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="going">Going</SelectItem>
-                      <SelectItem value="maybe">Maybe</SelectItem>
-                      <SelectItem value="not_going">Not Going</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Badge className={getStatusColor(att.status)}>
-                    {getStatusText(att.status)}
-                  </Badge>
-                )}
-              </div>
-            ))}
-          </div>
+
+          {attendance.length === 1 && isAdmin ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">
+                No attendance records found. Initialize attendance for all team
+                members.
+              </p>
+              <Button onClick={handleInitializeAttendance} disabled={saving}>
+                {saving ? "Initializing..." : "Initialize Attendance"}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {attendance.map((att) => (
+                <div
+                  key={att.id}
+                  className="flex items-center justify-between p-2 rounded border"
+                >
+                  <span className="font-medium">
+                    {att.teamMember?.user?.name || "Unknown Player"}
+                  </span>
+                  {isAdmin ? (
+                    <Select
+                      value={att.status}
+                      onValueChange={(status) =>
+                        handleAdminAttendanceChange(att.teamMemberId, status)
+                      }
+                      disabled={saving}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="going">Going</SelectItem>
+                        <SelectItem value="maybe">Maybe</SelectItem>
+                        <SelectItem value="not_going">Not Going</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge className={getStatusColor(att.status)}>
+                      {getStatusText(att.status)}
+                    </Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

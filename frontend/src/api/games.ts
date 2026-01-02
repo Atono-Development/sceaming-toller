@@ -103,6 +103,16 @@ export const adminUpdateAttendance = async (
   return response.data;
 };
 
+export const initializeGameAttendance = async (
+  teamId: string,
+  gameId: string
+) => {
+  const response = await api.post(
+    `/teams/${teamId}/games/${gameId}/attendance/initialize`
+  );
+  return response.data;
+};
+
 export const getBattingOrder = async (teamId: string, gameId: string) => {
   const response = await api.get<BattingOrder[]>(
     `/teams/${teamId}/games/${gameId}/batting-order`

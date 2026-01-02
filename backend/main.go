@@ -79,6 +79,7 @@ func main() {
 				r.Delete("/games/{gameID}", handlers.DeleteGame)
 				r.Put("/games/{gameID}/score", handlers.UpdateGameScore)
 				r.Put("/games/{gameID}/innings", handlers.UpdateInningScores)
+				r.Put("/games/{gameID}/attendance/admin", handlers.AdminUpdateAttendance)
 				
 				// Lineup management routes
 				r.Post("/games/{gameID}/batting-order/generate", handlers.GenerateBattingOrder)

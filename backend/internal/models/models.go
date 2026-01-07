@@ -47,7 +47,8 @@ type TeamMember struct {
 	TeamID   uuid.UUID `gorm:"type:uuid;index" json:"teamId"`
 	UserID   uuid.UUID `gorm:"type:uuid;index" json:"userId"`
 	Gender   string    `json:"gender"` // "M" or "F"
-	Role     string    `json:"role"`   // "admin", "player", "pitcher"
+	Role     string    `json:"role"`   // "player", "pitcher" (admin is now IsAdmin)
+	IsAdmin  bool      `gorm:"default:false" json:"isAdmin"`
 	IsActive bool      `gorm:"default:true" json:"isActive"`
 	JoinedAt time.Time `json:"joinedAt"`
 	LeftAt   *time.Time `json:"leftAt,omitempty"`

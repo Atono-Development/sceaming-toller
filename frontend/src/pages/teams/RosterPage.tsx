@@ -127,17 +127,24 @@ export function RosterPage() {
                   <TableCell>{member.user?.email}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {member.role.split(",").map((role, index) => (
-                        <Badge
-                          key={index}
-                          variant={
-                            role.trim() === "Admin" ? "default" : "secondary"
-                          }
-                          className="text-xs capitalize"
-                        >
-                          {role.trim()}
+                      {member.isAdmin && (
+                        <Badge variant="default" className="text-xs">
+                          Admin
                         </Badge>
-                      ))}
+                      )}
+                      {member.role
+                        .split(",")
+                        .map((role) => role.trim())
+                        .filter((role) => role !== "" && !role.toLowerCase().includes("admin"))
+                        .map((role, index) => (
+                          <Badge
+                            key={index}
+                            variant="secondary"
+                            className="text-xs capitalize"
+                          >
+                            {role}
+                          </Badge>
+                        ))}
                     </div>
                   </TableCell>
                   {isAdmin && (
@@ -176,9 +183,9 @@ export function RosterPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleRemove(member.id)}
-                        disabled={member.role === "admin"}
+                        disabled={member.isAdmin}
                         title={
-                          member.role === "admin"
+                          member.isAdmin
                             ? "Cannot remove admin"
                             : "Remove member"
                         }

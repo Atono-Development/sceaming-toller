@@ -114,14 +114,23 @@ func AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 		// Check if already a member
 		var existingMember models.TeamMember
 		if err := tx.Where("team_id = ? AND user_id = ?", invitation.TeamID, userID).First(&existingMember).Error; err == nil {
-			// Already a member, maybe just update role? For now, let's just error or say success.
-			// If active, error. If inactive, reactivate?
+			// Already a member
 			if existingMember.IsActive {
 				return nil // Already visible
 			}
 			// Reactivate
 			existingMember.IsActive = true
-			existingMember.Role = invitation.Role
+			// Only upgrade to admin if the invitation is for an admin role.
+			// Never demote an existing admin via invitation.
+			if invitation.Role == "admin" {
+				existingMember.IsAdmin = true
+			}
+			
+			// Normalize role string to not contain "admin" if it was there
+			if existingMember.Role == "admin" {
+				existingMember.Role = "player"
+			}
+			
 			return tx.Save(&existingMember).Error
 		}
 
@@ -129,9 +138,14 @@ func AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 		newMember := models.TeamMember{
 			TeamID:   invitation.TeamID,
 			UserID:   userID,
-			Role:     invitation.Role,
+			Role:     invitation.Role, // Will be "admin" or "player"
+			IsAdmin:  invitation.Role == "admin",
 			IsActive: true,
 			JoinedAt: time.Now(),
+		}
+		
+		if newMember.IsAdmin {
+			newMember.Role = "player" // Normalize role string to not contain "admin"
 		}
 		if err := tx.Create(&newMember).Error; err != nil {
 			return err

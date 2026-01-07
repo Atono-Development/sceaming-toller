@@ -120,28 +120,11 @@ func AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 			}
 			// Reactivate
 			existingMember.IsActive = true
+			// Only upgrade to admin if the invitation is for an admin role.
+			// Never demote an existing admin via invitation.
 			if invitation.Role == "admin" {
 				existingMember.IsAdmin = true
-				// Don't overwrite existing role string if it has other roles, 
-				// but since they were inactive, maybe we should just reset?
-				// Let's assume we keep "player" as base if it was "admin".
-				// But wait, the invitation role is singular. 
-				// If invite was admin, we set IsAdmin=true.
-				// We don't need to put "admin" in role string anymore.
-			} else {
-				// If invite is player, do we unset admin? Probably not safely. 
-				// But usually invite matches intent.
-				// Let's just update based on invite.
-				// If invite is "player", we don't set IsAdmin (default false or keep existing?)
-				// Let's stick to: Invite grants permissions.
 			}
-			// For simplicity and matching logic:
-			// If invite is admin -> IsAdmin = true.
-			// If invite is player -> IsAdmin = false (or keep existing? Safer to just set what was invited)
-			// Actually, if I invite someone as Admin, they should become Admin. 
-			// If I invite as Player, they should be Player.
-			
-			existingMember.IsAdmin = invitation.Role == "admin"
 			if invitation.Role == "admin" {
 				existingMember.Role = "player" // Default role string
 			} else {

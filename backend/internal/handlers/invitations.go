@@ -125,12 +125,6 @@ func AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 			if invitation.Role == "admin" {
 				existingMember.IsAdmin = true
 			}
-			if invitation.Role == "admin" {
-				existingMember.Role = "player" // Default role string
-			} else {
-				existingMember.Role = invitation.Role
-			}
-			
 			return tx.Save(&existingMember).Error
 		}
 

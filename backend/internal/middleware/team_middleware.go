@@ -49,7 +49,7 @@ func RequireTeamAdmin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		membership, ok := r.Context().Value("teamMembership").(models.TeamMember)
 
-		if !ok || membership.Role != "admin" {
+		if !ok || !membership.IsAdmin {
 			http.Error(w, "Requires admin role", http.StatusForbidden)
 			return
 		}

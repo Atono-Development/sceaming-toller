@@ -38,7 +38,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
   const { user } = useAuth();
   const { currentTeam } = useTeamContext();
 
-  const isAdmin = currentTeam?.membership?.role === "admin";
+  const isAdmin = !!currentTeam?.membership?.isAdmin;
 
   useEffect(() => {
     loadAttendance();

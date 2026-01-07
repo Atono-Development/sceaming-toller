@@ -11,6 +11,7 @@ export interface Team {
   isActive: boolean;
   membership?: {
     role: string;
+    isAdmin: boolean;
   };
 }
 
@@ -84,7 +85,7 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentTeam,
         isLoading,
         refreshTeams: fetchTeams,
-        isAdmin: currentTeam?.membership?.role === "admin",
+        isAdmin: !!currentTeam?.membership?.isAdmin,
       }}
     >
       {children}

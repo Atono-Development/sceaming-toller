@@ -114,14 +114,40 @@ func AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 		// Check if already a member
 		var existingMember models.TeamMember
 		if err := tx.Where("team_id = ? AND user_id = ?", invitation.TeamID, userID).First(&existingMember).Error; err == nil {
-			// Already a member, maybe just update role? For now, let's just error or say success.
-			// If active, error. If inactive, reactivate?
+			// Already a member
 			if existingMember.IsActive {
 				return nil // Already visible
 			}
 			// Reactivate
 			existingMember.IsActive = true
-			existingMember.Role = invitation.Role
+			if invitation.Role == "admin" {
+				existingMember.IsAdmin = true
+				// Don't overwrite existing role string if it has other roles, 
+				// but since they were inactive, maybe we should just reset?
+				// Let's assume we keep "player" as base if it was "admin".
+				// But wait, the invitation role is singular. 
+				// If invite was admin, we set IsAdmin=true.
+				// We don't need to put "admin" in role string anymore.
+			} else {
+				// If invite is player, do we unset admin? Probably not safely. 
+				// But usually invite matches intent.
+				// Let's just update based on invite.
+				// If invite is "player", we don't set IsAdmin (default false or keep existing?)
+				// Let's stick to: Invite grants permissions.
+			}
+			// For simplicity and matching logic:
+			// If invite is admin -> IsAdmin = true.
+			// If invite is player -> IsAdmin = false (or keep existing? Safer to just set what was invited)
+			// Actually, if I invite someone as Admin, they should become Admin. 
+			// If I invite as Player, they should be Player.
+			
+			existingMember.IsAdmin = invitation.Role == "admin"
+			if invitation.Role == "admin" {
+				existingMember.Role = "player" // Default role string
+			} else {
+				existingMember.Role = invitation.Role
+			}
+			
 			return tx.Save(&existingMember).Error
 		}
 
@@ -129,9 +155,14 @@ func AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 		newMember := models.TeamMember{
 			TeamID:   invitation.TeamID,
 			UserID:   userID,
-			Role:     invitation.Role,
+			Role:     invitation.Role, // Will be "admin" or "player"
+			IsAdmin:  invitation.Role == "admin",
 			IsActive: true,
 			JoinedAt: time.Now(),
+		}
+		
+		if newMember.IsAdmin {
+			newMember.Role = "player" // Normalize role string to not contain "admin"
 		}
 		if err := tx.Create(&newMember).Error; err != nil {
 			return err

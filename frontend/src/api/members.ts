@@ -6,6 +6,7 @@ export interface TeamMember {
   userId: string;
   gender: string;
   role: string;
+  isAdmin: boolean;
   isActive: boolean;
   joinedAt: string;
   user?: {

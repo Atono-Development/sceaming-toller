@@ -168,7 +168,7 @@ export function GamesPage() {
     <div className="container py-8 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Schedule</h1>
-        {currentTeam?.membership?.role === "admin" && (
+        {currentTeam?.membership?.isAdmin && (
           <Button asChild>
             <Link to={`/teams/${teamId}/games/new`}>
               <Plus className="mr-2 h-4 w-4" />
@@ -196,7 +196,7 @@ export function GamesPage() {
                       {format(utcToLocalDate(game.date), "MMM d, yyyy")} •{" "}
                       {game.time}
                     </div>
-                    {currentTeam?.membership?.role === "admin" && (
+                    {currentTeam?.membership?.isAdmin && (
                       <div className="flex gap-1">
                         <Button size="sm" variant="outline" asChild>
                           <Link to={`/teams/${teamId}/games/${game.id}/edit`}>
@@ -367,7 +367,7 @@ export function GamesPage() {
                       {format(utcToLocalDate(game.date), "MMM d, yyyy")} •{" "}
                       {game.time}
                     </div>
-                    {currentTeam?.membership?.role === "admin" && (
+                    {currentTeam?.membership?.isAdmin && (
                       <div className="flex gap-1">
                         <Button size="sm" variant="outline" asChild>
                           <Link to={`/teams/${teamId}/games/${game.id}/edit`}>

@@ -112,18 +112,7 @@ export function GamesPage() {
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "going":
-        return "Going";
-      case "maybe":
-        return "Maybe";
-      case "not_going":
-        return "Not Going";
-      default:
-        return "Unknown";
-    }
-  };
+
 
   const handleDeleteGame = async (gameId: string) => {
     if (window.confirm("Are you sure you want to delete this game?")) {

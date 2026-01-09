@@ -78,6 +78,9 @@ export function ScoreGamePage() {
         finalScore: game.finalScore?.toString() || "",
         opponentScore: game.opponentScore?.toString() || "",
       });
+      if (game.inningScores) {
+        setInningScores(game.inningScores);
+      }
     }
   }, [game, scoreForm]);
 

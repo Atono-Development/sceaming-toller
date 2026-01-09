@@ -97,6 +97,7 @@ type Game struct {
 	UpdatedAt     time.Time `json:"updatedAt"`
 
 	Team Team `gorm:"foreignKey:TeamID" json:"team,omitempty"`
+	InningScores []InningScore `gorm:"foreignKey:GameID" json:"inningScores,omitempty"`
 }
 
 func (g *Game) BeforeCreate(tx *gorm.DB) (err error) {
@@ -164,10 +165,11 @@ func (fl *FieldingLineup) BeforeCreate(tx *gorm.DB) (err error) {
 }
 
 type InningScore struct {
-	ID     uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	GameID uuid.UUID `gorm:"type:uuid;index" json:"gameId"`
-	Inning int       `json:"inning"`
-	Score  int       `json:"score"`
+	ID            uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	GameID        uuid.UUID `gorm:"type:uuid;index" json:"gameId"`
+	Inning        int       `json:"inning"`
+	TeamScore     int       `json:"teamScore"`
+	OpponentScore int       `json:"opponentScore"`
 
 	Game Game `gorm:"foreignKey:GameID" json:"game,omitempty"`
 }

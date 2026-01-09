@@ -84,6 +84,24 @@ export function ScoreGamePage() {
     }
   }, [game, scoreForm]);
 
+  // Auto-sum scores when 7 innings are present
+  useEffect(() => {
+    const hasAllInnings = [1, 2, 3, 4, 5, 6, 7].every((inningNum) =>
+      inningScores.some((s) => s.inning === inningNum)
+    );
+
+    if (hasAllInnings) {
+      const teamTotal = inningScores.reduce((sum, s) => sum + s.teamScore, 0);
+      const opponentTotal = inningScores.reduce(
+        (sum, s) => sum + s.opponentScore,
+        0
+      );
+
+      scoreForm.setValue("finalScore", teamTotal.toString());
+      scoreForm.setValue("opponentScore", opponentTotal.toString());
+    }
+  }, [inningScores, scoreForm]);
+
   const updateScoreMutation = useMutation({
     mutationFn: (values: { finalScore: number; opponentScore: number }) =>
       updateGameScore(

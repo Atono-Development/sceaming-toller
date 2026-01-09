@@ -248,7 +248,3 @@ backend/
 3. Ensure code builds: `docker compose exec backend go build .`
 4. Format code: `docker compose exec backend go fmt ./...`
 5. Commit and push changes
-
-## License
-
-[Add your license here]

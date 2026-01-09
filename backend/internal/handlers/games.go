@@ -552,7 +552,17 @@ func UpdateInningScores(w http.ResponseWriter, r *http.Request) {
 	// Save scores
 	for _, reqScore := range req.InningScores {
 		var score models.InningScore
-		if result := database.DB.Where("game_id = ? AND inning = ?", gameID, reqScore.Inning).First(&score); result.Error != nil {
+		var existingScores []models.InningScore
+		
+		// Use Find instead of First to avoid "record not found" errors in logs
+		result := database.DB.Where("game_id = ? AND inning = ?", gameID, reqScore.Inning).Find(&existingScores)
+		
+		if result.Error != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+
+		if len(existingScores) == 0 {
 			// Create new score
 			score = models.InningScore{
 				GameID:        gameID,
@@ -565,6 +575,7 @@ func UpdateInningScores(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		} else {
+			score = existingScores[0]
 			// Update existing score
 			if result := database.DB.Model(&score).Updates(map[string]interface{}{
 				"team_score":     reqScore.TeamScore,

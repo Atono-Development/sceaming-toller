@@ -58,8 +58,8 @@ export function InviteMemberDialog() {
       const link = `${window.location.origin}/invitations/${data.token}`;
       setInviteLink(link);
       toast({
-        title: "Invitation Created",
-        description: "Share the link with the player to join.",
+        title: "Invitation Sent",
+        description: "Email sent to player. You can also copy the link.",
       });
     },
     onError: (error: unknown) => {
@@ -144,13 +144,22 @@ export function InviteMemberDialog() {
                 {mutation.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Create Invite
+                Send Invitation
               </Button>
             </DialogFooter>
           </form>
         ) : (
           <div className="grid gap-4 py-4">
-            <div className="flex items-center space-x-2">
+            <div className="rounded-md bg-green-50 p-4 border border-green-200">
+              <p className="text-sm text-green-800 font-medium">
+                ✅ Invitation sent!
+              </p>
+              <p className="text-sm text-green-700 mt-1">
+                An email has been sent to the player.
+              </p>
+            </div>
+            
+            <div className="flex items-center space-x-2 mt-2">
               <div className="grid flex-1 gap-2">
                 <Label htmlFor="link" className="sr-only">
                   Link
@@ -168,7 +177,7 @@ export function InviteMemberDialog() {
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              Send this link to the player. It will expire in 7 days.
+              You can also copy the link above and send it manually.
             </p>
             <DialogFooter>
               <Button

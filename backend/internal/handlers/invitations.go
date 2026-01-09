@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/liam/screaming-toller/backend/internal/database"
 	"github.com/liam/screaming-toller/backend/internal/models"
+	"github.com/liam/screaming-toller/backend/internal/services"
 	"gorm.io/gorm"
 )
 
@@ -57,6 +58,38 @@ func InviteMember(w http.ResponseWriter, r *http.Request) {
 	if result := database.DB.Create(&invitation); result.Error != nil {
 		http.Error(w, "Failed to create invitation", http.StatusInternalServerError)
 		return
+	}
+
+	// Send invitation email
+	// Fetch team details for email context
+	var team models.Team
+	if err := database.DB.First(&team, teamID).Error; err != nil {
+		// Log error but don't fail the request - invitation was created
+		println("Warning: Failed to fetch team details for email:", err.Error())
+	}
+
+	// Fetch inviter details for email context
+	var inviter models.User
+	if err := database.DB.First(&inviter, userID).Error; err != nil {
+		// Log error but don't fail the request
+		println("Warning: Failed to fetch inviter details for email:", err.Error())
+	}
+
+	// Try to send the invitation email
+	emailService, err := services.NewEmailService()
+	if err != nil {
+		// Log error but don't fail the request - invitation was created successfully
+		println("Warning: Failed to initialize email service:", err.Error())
+	} else {
+		inviterName := inviter.Name
+		if inviterName == "" {
+			inviterName = inviter.Email
+		}
+
+		if err := emailService.SendInvitationEmail(req.Email, team.Name, inviterName, token); err != nil {
+			// Log error but don't fail the request
+			println("Warning: Failed to send invitation email:", err.Error())
+		}
 	}
 
 	w.WriteHeader(http.StatusCreated)

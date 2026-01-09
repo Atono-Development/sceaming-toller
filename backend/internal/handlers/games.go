@@ -11,6 +11,7 @@ import (
 	"github.com/liam/screaming-toller/backend/internal/database"
 	"github.com/liam/screaming-toller/backend/internal/models"
 	"github.com/liam/screaming-toller/backend/internal/algorithms"
+	"gorm.io/gorm"
 )
 
 type CreateGameRequest struct {
@@ -110,7 +111,9 @@ func GetGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var game models.Game
-	if result := database.DB.Where("id = ? AND team_id = ?", gameID, teamID).First(&game); result.Error != nil {
+	if result := database.DB.Preload("InningScores", func(db *gorm.DB) *gorm.DB {
+		return db.Order("inning ASC")
+	}).Where("id = ? AND team_id = ?", gameID, teamID).First(&game); result.Error != nil {
 		http.Error(w, "Game not found", http.StatusNotFound)
 		return
 	}
@@ -528,6 +531,7 @@ func UpdateInningScores(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify game belongs to team
 	var game models.Game
 	if result := database.DB.Where("id = ? AND team_id = ?", gameID, teamID).First(&game); result.Error != nil {
 		http.Error(w, "Game not found", http.StatusNotFound)
@@ -538,6 +542,48 @@ func UpdateInningScores(w http.ResponseWriter, r *http.Request) {
 		if inningScore.Inning < 1 || inningScore.Inning > 7 {
 			http.Error(w, "Inning must be between 1 and 7", http.StatusBadRequest)
 			return
+		}
+		if inningScore.TeamScore < 0 || inningScore.OpponentScore < 0 {
+			http.Error(w, "Scores cannot be negative", http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Save scores
+	for _, reqScore := range req.InningScores {
+		var score models.InningScore
+		var existingScores []models.InningScore
+		
+		// Use Find instead of First to avoid "record not found" errors in logs
+		result := database.DB.Where("game_id = ? AND inning = ?", gameID, reqScore.Inning).Find(&existingScores)
+		
+		if result.Error != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+
+		if len(existingScores) == 0 {
+			// Create new score
+			score = models.InningScore{
+				GameID:        gameID,
+				Inning:        reqScore.Inning,
+				TeamScore:     reqScore.TeamScore,
+				OpponentScore: reqScore.OpponentScore,
+			}
+			if result := database.DB.Create(&score); result.Error != nil {
+				http.Error(w, "Failed to save score", http.StatusInternalServerError)
+				return
+			}
+		} else {
+			score = existingScores[0]
+			// Update existing score
+			if result := database.DB.Model(&score).Updates(map[string]interface{}{
+				"team_score":     reqScore.TeamScore,
+				"opponent_score": reqScore.OpponentScore,
+			}); result.Error != nil {
+				http.Error(w, "Failed to update score", http.StatusInternalServerError)
+				return
+			}
 		}
 	}
 

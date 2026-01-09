@@ -12,6 +12,7 @@ export interface Game {
   status: string;
   createdAt: string;
   updatedAt: string;
+  inningScores?: InningScore[];
 }
 
 export interface Attendance {

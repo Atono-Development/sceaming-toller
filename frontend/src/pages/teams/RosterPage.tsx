@@ -19,6 +19,7 @@ import { Badge } from "../../components/ui/badge";
 import { Trash2 } from "lucide-react";
 import { useToast } from "../../hooks/use-toast";
 import { format } from "date-fns";
+import { MobileRosterCard } from "../../components/MobileRosterCard";
 
 export function RosterPage() {
   const { currentTeam, isAdmin } = useTeamContext();
@@ -88,7 +89,7 @@ export function RosterPage() {
         {isAdmin && <InviteMemberDialog />}
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -199,6 +200,19 @@ export function RosterPage() {
             })}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile View */}
+      <div className="md:hidden">
+        {members?.map((member) => (
+          <MobileRosterCard
+            key={member.id}
+            member={member}
+            isAdmin={isAdmin}
+            preferences={memberPreferences?.find((p) => p.id === member.id)}
+            onRemove={handleRemove}
+          />
+        ))}
       </div>
     </div>
   );

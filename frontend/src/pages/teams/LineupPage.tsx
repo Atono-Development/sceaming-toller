@@ -974,7 +974,7 @@ const LineupPage: React.FC = () => {
                               <h4 className="text-sm font-medium text-muted-foreground">
                                 Fielding Positions
                               </h4>
-                              <div className="grid grid-cols-3 gap-2">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                                 {fieldingPlayers.map((player) => (
                                   <div
                                     key={player.id}
@@ -1042,7 +1042,7 @@ const LineupPage: React.FC = () => {
                                 <h4 className="text-sm font-medium text-muted-foreground">
                                   On Bench
                                 </h4>
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                                   {benchPlayers.map((player) => (
                                     <div
                                       key={player.id}

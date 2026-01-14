@@ -187,18 +187,17 @@ export function GamesPage() {
                     </div>
                     {currentTeam?.membership?.isAdmin && (
                       <div className="flex gap-1">
-                        <Button size="sm" variant="outline" asChild>
+                        <Button variant="outline" asChild>
                           <Link to={`/teams/${teamId}/games/${game.id}/edit`}>
                             <Edit className="h-4 w-4" />
                           </Link>
                         </Button>
-                        <Button size="sm" variant="outline" asChild>
+                        <Button variant="outline" asChild>
                           <Link to={`/teams/${teamId}/games/${game.id}/score`}>
                             <Trophy className="h-4 w-4" />
                           </Link>
                         </Button>
                         <Button
-                          size="sm"
                           variant="outline"
                           onClick={() => handleDeleteGame(game.id)}
                           disabled={deleteGameMutation.isPending}
@@ -282,7 +281,6 @@ export function GamesPage() {
                     </div>
                     <div className="flex space-x-2">
                       <Button
-                        size="sm"
                         variant={
                           attendanceStates[game.id]?.status === "going"
                             ? "default"
@@ -298,7 +296,6 @@ export function GamesPage() {
                         Going
                       </Button>
                       <Button
-                        size="sm"
                         variant={
                           attendanceStates[game.id]?.status === "maybe"
                             ? "default"
@@ -314,7 +311,6 @@ export function GamesPage() {
                         Maybe
                       </Button>
                       <Button
-                        size="sm"
                         variant={
                           attendanceStates[game.id]?.status === "not_going"
                             ? "default"
@@ -358,18 +354,17 @@ export function GamesPage() {
                     </div>
                     {currentTeam?.membership?.isAdmin && (
                       <div className="flex gap-1">
-                        <Button size="sm" variant="outline" asChild>
+                        <Button variant="outline" asChild>
                           <Link to={`/teams/${teamId}/games/${game.id}/edit`}>
                             <Edit className="h-4 w-4" />
                           </Link>
                         </Button>
-                        <Button size="sm" variant="outline" asChild>
+                        <Button variant="outline" asChild>
                           <Link to={`/teams/${teamId}/games/${game.id}/score`}>
                             <Trophy className="h-4 w-4" />
                           </Link>
                         </Button>
                         <Button
-                          size="sm"
                           variant="outline"
                           onClick={() => handleDeleteGame(game.id)}
                           disabled={deleteGameMutation.isPending}
@@ -453,7 +448,6 @@ export function GamesPage() {
                     </div>
                     <div className="flex space-x-2">
                       <Button
-                        size="sm"
                         variant={
                           attendanceStates[game.id]?.status === "going"
                             ? "default"
@@ -469,7 +463,6 @@ export function GamesPage() {
                         Going
                       </Button>
                       <Button
-                        size="sm"
                         variant={
                           attendanceStates[game.id]?.status === "maybe"
                             ? "default"
@@ -485,7 +478,6 @@ export function GamesPage() {
                         Maybe
                       </Button>
                       <Button
-                        size="sm"
                         variant={
                           attendanceStates[game.id]?.status === "not_going"
                             ? "default"

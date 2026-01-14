@@ -74,9 +74,9 @@ const SortableBattingPlayer: React.FC<{
           <div
             {...attributes}
             {...listeners}
-            className="cursor-grab active:cursor-grabbing"
+            className="cursor-grab active:cursor-grabbing p-2 -ml-2 touch-none"
           >
-            <GripVertical className="h-4 w-4 text-gray-400" />
+            <GripVertical className="h-6 w-6 text-gray-400" />
           </div>
         )}
         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
@@ -141,7 +141,12 @@ const LineupPage: React.FC = () => {
   }, [showPrintView]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })

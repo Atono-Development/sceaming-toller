@@ -101,7 +101,6 @@ export function MobileRosterCard({
           <div className="flex justify-end pt-2">
             <Button
               variant="ghost"
-              size="sm"
               className="text-red-600 hover:text-red-700 hover:bg-red-50"
               onClick={() => onRemove(member.id)}
               disabled={member.isAdmin}

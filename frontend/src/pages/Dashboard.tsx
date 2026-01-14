@@ -214,7 +214,6 @@ export default function Dashboard() {
                     <Button
                       className="mt-3 w-full"
                       variant="outline"
-                      size="sm"
                       onClick={() =>
                         navigate(`/teams/${currentTeam.id}/profile`)
                       }
@@ -234,7 +233,6 @@ export default function Dashboard() {
                         ) : (
                           <div className="flex space-x-2">
                             <Button
-                              size="sm"
                               variant={
                                 attendance?.status === "going"
                                   ? "default"
@@ -250,7 +248,6 @@ export default function Dashboard() {
                               Going
                             </Button>
                             <Button
-                              size="sm"
                               variant={
                                 attendance?.status === "maybe"
                                   ? "default"
@@ -266,7 +263,6 @@ export default function Dashboard() {
                               Maybe
                             </Button>
                             <Button
-                              size="sm"
                               variant={
                                 attendance?.status === "not_going"
                                   ? "default"

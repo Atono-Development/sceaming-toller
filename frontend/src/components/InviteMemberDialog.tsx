@@ -111,26 +111,26 @@ export function InviteMemberDialog() {
 
         {!inviteLink ? (
           <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">
+            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+              <Label htmlFor="email" className="text-left sm:text-right">
                 Email
               </Label>
               <Input
                 id="email"
                 placeholder="player@example.com"
-                className="col-span-3"
+                className="col-span-1 sm:col-span-3"
                 {...register("email", { required: true })}
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="role" className="text-right">
+            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+              <Label htmlFor="role" className="text-left sm:text-right">
                 Role
               </Label>
               <Select
                 defaultValue="player"
                 onValueChange={(val) => setValue("role", val)}
               >
-                <SelectTrigger className="col-span-3">
+                <SelectTrigger className="col-span-1 sm:col-span-3">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>

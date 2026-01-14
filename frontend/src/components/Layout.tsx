@@ -3,6 +3,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useTeamContext } from "../contexts/TeamContext";
 import { Button } from "@/components/ui/button";
 import { TeamSelector } from "@/components/TeamSelector";
+import { MobileMenu } from "@/components/MobileMenu";
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -14,7 +15,8 @@ export default function Layout() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
+            <div className="flex items-center space-x-4">
+              <MobileMenu />
               <Link
                 to="/"
                 className="text-xl font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
@@ -31,7 +33,7 @@ export default function Layout() {
               )}
 
               {currentTeam && (
-                <>
+                <nav className="hidden md:flex md:items-center md:space-x-2">
                   <Button
                     variant="ghost"
                     onClick={() => navigate(`/teams/${currentTeam.id}/games`)}
@@ -56,12 +58,14 @@ export default function Layout() {
                   >
                     Profile
                   </Button>
-                </>
+                </nav>
               )}
 
-              <TeamSelector />
+              <div className="hidden md:block">
+                <TeamSelector />
+              </div>
 
-              <Button variant="outline" onClick={logout}>
+              <Button variant="outline" onClick={logout} className="hidden md:flex">
                 Logout
               </Button>
             </div>
@@ -75,3 +79,4 @@ export default function Layout() {
     </div>
   );
 }
+

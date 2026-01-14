@@ -760,7 +760,7 @@ const LineupPage: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="mb-4 flex gap-2">
+            <div className="mb-4 flex flex-wrap gap-2">
               <Button
                 onClick={generateAllInnings}
                 disabled={loading}

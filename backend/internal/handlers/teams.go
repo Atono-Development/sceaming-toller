@@ -115,6 +115,13 @@ func RejectTeam(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Delete the team members first to satisfy FK constraints
+	// (cascading delete not configured or failing)
+	if err := database.DB.Unscoped().Where("team_id = ?", team.ID).Delete(&models.TeamMember{}).Error; err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Delete the team (cascading delete should handle members if configured, 
 	// otherwise we delete the team and let DB constraints or GORM hooks handle it. 
 	// Assuming standard GORM cleanup or that we want a hard delete).

@@ -106,13 +106,7 @@ func RejectTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	team.Status = "rejected"
-	if err := database.DB.Save(&team).Error; err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Send email to team creator
+	// Send email to team creator before deletion
 	var creator models.TeamMember
 	if err := database.DB.Preload("User").Where("team_id = ? AND is_admin = ?", team.ID, true).First(&creator).Error; err == nil {
 		emailService, _ := services.NewEmailService()
@@ -121,7 +115,47 @@ func RejectTeam(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	json.NewEncoder(w).Encode(team)
+	// Delete the team and its associations in a transaction to ensure data integrity
+	err = database.DB.Transaction(func(tx *gorm.DB) error {
+		// 1. Get all team member IDs to delete their preferences
+		var memberIDs []uuid.UUID
+		if err := tx.Model(&models.TeamMember{}).Where("team_id = ?", team.ID).Pluck("id", &memberIDs).Error; err != nil {
+			return err
+		}
+
+		// 2. Delete TeamMemberPreferences
+		if len(memberIDs) > 0 {
+			if err := tx.Unscoped().Where("team_member_id IN ?", memberIDs).Delete(&models.TeamMemberPreference{}).Error; err != nil {
+				return err
+			}
+		}
+
+		// 3. Delete TeamMembers
+		if err := tx.Unscoped().Where("team_id = ?", team.ID).Delete(&models.TeamMember{}).Error; err != nil {
+			return err
+		}
+
+		// 4. Delete Invitations (if any)
+		if err := tx.Unscoped().Where("team_id = ?", team.ID).Delete(&models.Invitation{}).Error; err != nil {
+			return err
+		}
+
+		// 5. Delete the Team itself
+		if err := tx.Unscoped().Delete(&team).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+    
+    // Return empty success or the deleted info
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Team rejected and deleted"})
 }
 
 func CreateTeam(w http.ResponseWriter, r *http.Request) {

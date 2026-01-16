@@ -32,7 +32,7 @@ export default function Layout() {
                 </span>
               )}
 
-              {currentTeam && (
+              {currentTeam && currentTeam.status !== "pending" && (
                 <nav className="hidden md:flex md:items-center md:space-x-2">
                   <Button
                     variant="ghost"

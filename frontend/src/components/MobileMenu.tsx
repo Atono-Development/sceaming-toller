@@ -53,7 +53,7 @@ export function MobileMenu() {
             </div>
           )}
 
-          {currentTeam && (
+          {currentTeam && currentTeam.status !== "pending" && (
             <nav className="flex flex-col space-y-2">
               <Button
                 variant="ghost"

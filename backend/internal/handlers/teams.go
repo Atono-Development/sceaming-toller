@@ -106,13 +106,7 @@ func RejectTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	team.Status = "rejected"
-	if err := database.DB.Save(&team).Error; err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Send email to team creator
+	// Send email to team creator before deletion
 	var creator models.TeamMember
 	if err := database.DB.Preload("User").Where("team_id = ? AND is_admin = ?", team.ID, true).First(&creator).Error; err == nil {
 		emailService, _ := services.NewEmailService()
@@ -121,7 +115,18 @@ func RejectTeam(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	json.NewEncoder(w).Encode(team)
+	// Delete the team (cascading delete should handle members if configured, 
+	// otherwise we delete the team and let DB constraints or GORM hooks handle it. 
+	// Assuming standard GORM cleanup or that we want a hard delete).
+	// We'll use Unscoped to ensure it's permanently deleted if the model has DeletedAt.
+	if err := database.DB.Unscoped().Delete(&team).Error; err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+    
+    // Return empty success or the deleted info
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Team rejected and deleted"})
 }
 
 func CreateTeam(w http.ResponseWriter, r *http.Request) {

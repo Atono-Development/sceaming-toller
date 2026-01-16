@@ -137,7 +137,21 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {currentTeam?.status === "pending" ? (
+          <Card className="border-yellow-200 bg-yellow-50">
+            <CardHeader>
+              <CardTitle className="text-yellow-800">
+                Creation Request Under Review
+              </CardTitle>
+              <CardDescription className="text-yellow-700">
+                Your team "{currentTeam.name}" is currently being reviewed by an
+                administrator. You will be notified via email once your request
+                has been approved or rejected.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>My Team</CardTitle>
@@ -334,7 +348,8 @@ export default function Dashboard() {
               )}
             </CardContent>
           </Card>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

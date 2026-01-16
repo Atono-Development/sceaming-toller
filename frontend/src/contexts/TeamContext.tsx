@@ -9,6 +9,7 @@ export interface Team {
   league: string;
   season: string;
   isActive: boolean;
+  status: "active" | "pending" | "rejected";
   membership?: {
     role: string;
     isAdmin: boolean;

@@ -115,18 +115,40 @@ func RejectTeam(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Delete the team members first to satisfy FK constraints
-	// (cascading delete not configured or failing)
-	if err := database.DB.Unscoped().Where("team_id = ?", team.ID).Delete(&models.TeamMember{}).Error; err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// Delete the team and its associations in a transaction to ensure data integrity
+	err = database.DB.Transaction(func(tx *gorm.DB) error {
+		// 1. Get all team member IDs to delete their preferences
+		var memberIDs []uuid.UUID
+		if err := tx.Model(&models.TeamMember{}).Where("team_id = ?", team.ID).Pluck("id", &memberIDs).Error; err != nil {
+			return err
+		}
 
-	// Delete the team (cascading delete should handle members if configured, 
-	// otherwise we delete the team and let DB constraints or GORM hooks handle it. 
-	// Assuming standard GORM cleanup or that we want a hard delete).
-	// We'll use Unscoped to ensure it's permanently deleted if the model has DeletedAt.
-	if err := database.DB.Unscoped().Delete(&team).Error; err != nil {
+		// 2. Delete TeamMemberPreferences
+		if len(memberIDs) > 0 {
+			if err := tx.Unscoped().Where("team_member_id IN ?", memberIDs).Delete(&models.TeamMemberPreference{}).Error; err != nil {
+				return err
+			}
+		}
+
+		// 3. Delete TeamMembers
+		if err := tx.Unscoped().Where("team_id = ?", team.ID).Delete(&models.TeamMember{}).Error; err != nil {
+			return err
+		}
+
+		// 4. Delete Invitations (if any)
+		if err := tx.Unscoped().Where("team_id = ?", team.ID).Delete(&models.Invitation{}).Error; err != nil {
+			return err
+		}
+
+		// 5. Delete the Team itself
+		if err := tx.Unscoped().Delete(&team).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

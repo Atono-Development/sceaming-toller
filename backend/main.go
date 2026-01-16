@@ -46,6 +46,13 @@ func main() {
 		r.Post("/api/teams", handlers.CreateTeam)
 		r.Get("/api/teams", handlers.GetTeams)
 
+		// Admin Routes (Global)
+		r.Route("/api/admin", func(r chi.Router) {
+			r.Get("/teams/pending", handlers.GetPendingTeams)
+			r.Post("/teams/{teamID}/approve", handlers.ApproveTeam)
+			r.Post("/teams/{teamID}/reject", handlers.RejectTeam)
+		})
+
 		// Invitations
 		r.Get("/api/invitations/{token}", handlers.GetInvitation)
 		r.Post("/api/invitations/{token}/accept", handlers.AcceptInvitation)

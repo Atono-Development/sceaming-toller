@@ -12,6 +12,7 @@ type User struct {
 	Name         string    `json:"name"`
 	Email        string    `gorm:"uniqueIndex" json:"email"`
 	PasswordHash string    `json:"-"`
+	IsSuperAdmin bool      `gorm:"default:false" json:"isSuperAdmin"`
 	CreatedAt    time.Time `json:"createdAt"`
 	UpdatedAt    time.Time `json:"updatedAt"`
 }
@@ -29,6 +30,7 @@ type Team struct {
 	Description string    `json:"description"`
 	League      string    `json:"league"`
 	Season      string    `json:"season"`
+	Status      string    `gorm:"default:'pending'" json:"status"` // "pending", "active", "rejected"
 	IsActive    bool      `gorm:"default:true" json:"isActive"`
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`

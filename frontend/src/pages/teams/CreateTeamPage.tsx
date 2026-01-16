@@ -21,7 +21,7 @@ type CreateTeamValues = z.infer<typeof createTeamSchema>;
 
 export const CreateTeamPage: React.FC = () => {
   const navigate = useNavigate();
-  const { refreshTeams, setCurrentTeam } = useTeamContext();
+  const { refreshTeams } = useTeamContext();
   const {
     register,
     handleSubmit,
@@ -30,17 +30,41 @@ export const CreateTeamPage: React.FC = () => {
     resolver: zodResolver(createTeamSchema),
   });
 
+  const [isSuccess, setIsSuccess] = React.useState(false);
+
   const onSubmit = async (values: CreateTeamValues) => {
     try {
-      const response = await api.post('/teams', values);
+      await api.post('/teams', values);
       await refreshTeams();
-      setCurrentTeam(response.data);
-      navigate('/');
+      setIsSuccess(true);
     } catch (error) {
       console.error('Failed to create team', error);
       alert('Failed to create team. Please try again.');
     }
   };
+
+  if (isSuccess) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
+        <Card className="w-full max-w-md shadow-lg border-slate-200">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold text-slate-900 text-center">Request Sent!</CardTitle>
+            <CardDescription className="text-slate-500 text-center text-lg mt-2">
+              Your request to create a new team has been submitted for review.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center py-6 text-slate-600">
+            An admin will review your request. You'll receive an email upon approval.
+          </CardContent>
+          <CardFooter>
+            <Button onClick={() => navigate('/')} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white">
+              Back to Dashboard
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">

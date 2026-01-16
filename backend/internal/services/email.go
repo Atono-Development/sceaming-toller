@@ -62,6 +62,68 @@ func (s *EmailService) SendInvitationEmail(toEmail, teamName, inviterName, token
 	return nil
 }
 
+// SendTeamRequestEmail sends an email to the super admin about a new team creation request
+func (s *EmailService) SendTeamRequestEmail(adminEmail, requesterName, teamName string) error {
+	subject := fmt.Sprintf("New Team Request: %s", teamName)
+	htmlContent := fmt.Sprintf(`
+		<h1>New Team Request</h1>
+		<p><strong>%s</strong> has requested to create a new team: <strong>%s</strong>.</p>
+		<p>Please log in to the admin dashboard to approve or reject this request.</p>
+		<p><a href="%s/admin/teams">View Requests</a></p>
+	`, requesterName, teamName, s.appURL)
+
+	params := &resend.SendEmailRequest{
+		From:    s.fromEmail,
+		To:      []string{adminEmail},
+		Subject: subject,
+		Html:    htmlContent,
+	}
+
+	_, err := s.client.Emails.Send(params)
+	return err
+}
+
+// SendTeamApprovedEmail sends an email to the requester when their team is approved
+func (s *EmailService) SendTeamApprovedEmail(toEmail, teamName string) error {
+	subject := fmt.Sprintf("Team Approved: %s", teamName)
+	htmlContent := fmt.Sprintf(`
+		<h1>Congratulations!</h1>
+		<p>Your team <strong>%s</strong> has been approved.</p>
+		<p>You can now start managing your team and inviting members.</p>
+		<p><a href="%s/teams">Go to Teams</a></p>
+	`, teamName, s.appURL)
+
+	params := &resend.SendEmailRequest{
+		From:    s.fromEmail,
+		To:      []string{toEmail},
+		Subject: subject,
+		Html:    htmlContent,
+	}
+
+	_, err := s.client.Emails.Send(params)
+	return err
+}
+
+// SendTeamRejectedEmail sends an email to the requester when their team is rejected
+func (s *EmailService) SendTeamRejectedEmail(toEmail, teamName string) error {
+	subject := fmt.Sprintf("Team Request Update: %s", teamName)
+	htmlContent := fmt.Sprintf(`
+		<h1>Team Request Update</h1>
+		<p>We're sorry, but your request to create the team <strong>%s</strong> has been declined at this time.</p>
+		<p>If you have any questions, please contact support.</p>
+	`, teamName)
+
+	params := &resend.SendEmailRequest{
+		From:    s.fromEmail,
+		To:      []string{toEmail},
+		Subject: subject,
+		Html:    htmlContent,
+	}
+
+	_, err := s.client.Emails.Send(params)
+	return err
+}
+
 // buildInvitationHTML creates the HTML email template
 func (s *EmailService) buildInvitationHTML(teamName, inviterName, invitationURL string) string {
 	return fmt.Sprintf(`

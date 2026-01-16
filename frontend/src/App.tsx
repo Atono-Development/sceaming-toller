@@ -18,6 +18,7 @@ import { ScoreGamePage } from "./pages/teams/ScoreGamePage";
 import { RosterPage } from "./pages/teams/RosterPage";
 import LineupPage from "./pages/teams/LineupPage";
 import { AcceptInvitePage } from "./pages/AcceptInvitePage";
+import { AdminTeamsPage } from "./pages/admin/AdminTeamsPage";
 import Layout from "./components/Layout";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -120,6 +121,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <AcceptInvitePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/teams"
+                element={
+                  <ProtectedRoute>
+                    <AdminTeamsPage />
                   </ProtectedRoute>
                 }
               />

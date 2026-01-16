@@ -8,8 +8,121 @@ import (
 	"github.com/google/uuid"
 	"github.com/liam/screaming-toller/backend/internal/database"
 	"github.com/liam/screaming-toller/backend/internal/models"
+	"github.com/liam/screaming-toller/backend/internal/services"
 	"gorm.io/gorm"
 )
+
+// ... existing CreateTeam, GetTeams, GetTeam ...
+
+func GetPendingTeams(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(uuid.UUID)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var user models.User
+	if err := database.DB.First(&user, userID).Error; err != nil || !user.IsSuperAdmin {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	var teams []models.Team
+	if err := database.DB.Where("status = ?", "pending").Find(&teams).Error; err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(teams)
+}
+
+func ApproveTeam(w http.ResponseWriter, r *http.Request) {
+	adminID, ok := r.Context().Value("userID").(uuid.UUID)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var admin models.User
+	if err := database.DB.First(&admin, adminID).Error; err != nil || !admin.IsSuperAdmin {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	teamIDStr := chi.URLParam(r, "teamID")
+	teamID, err := uuid.Parse(teamIDStr)
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+
+	var team models.Team
+	if err := database.DB.First(&team, teamID).Error; err != nil {
+		http.Error(w, "Team not found", http.StatusNotFound)
+		return
+	}
+
+	team.Status = "active"
+	if err := database.DB.Save(&team).Error; err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Send email to team creator
+	var creator models.TeamMember
+	if err := database.DB.Preload("User").Where("team_id = ? AND is_admin = ?", team.ID, true).First(&creator).Error; err == nil {
+		emailService, _ := services.NewEmailService()
+		if emailService != nil {
+			emailService.SendTeamApprovedEmail(creator.User.Email, team.Name)
+		}
+	}
+
+	json.NewEncoder(w).Encode(team)
+}
+
+func RejectTeam(w http.ResponseWriter, r *http.Request) {
+	adminID, ok := r.Context().Value("userID").(uuid.UUID)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var admin models.User
+	if err := database.DB.First(&admin, adminID).Error; err != nil || !admin.IsSuperAdmin {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	teamIDStr := chi.URLParam(r, "teamID")
+	teamID, err := uuid.Parse(teamIDStr)
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+
+	var team models.Team
+	if err := database.DB.First(&team, teamID).Error; err != nil {
+		http.Error(w, "Team not found", http.StatusNotFound)
+		return
+	}
+
+	team.Status = "rejected"
+	if err := database.DB.Save(&team).Error; err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Send email to team creator
+	var creator models.TeamMember
+	if err := database.DB.Preload("User").Where("team_id = ? AND is_admin = ?", team.ID, true).First(&creator).Error; err == nil {
+		emailService, _ := services.NewEmailService()
+		if emailService != nil {
+			emailService.SendTeamRejectedEmail(creator.User.Email, team.Name)
+		}
+	}
+
+	json.NewEncoder(w).Encode(team)
+}
 
 func CreateTeam(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(uuid.UUID)
@@ -24,6 +137,9 @@ func CreateTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Set default status to pending for new teams
+	team.Status = "pending"
+
 	err := database.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&team).Error; err != nil {
 			return err
@@ -33,6 +149,7 @@ func CreateTeam(w http.ResponseWriter, r *http.Request) {
 			TeamID:   team.ID,
 			UserID:   userID,
 			Role:     "admin",
+			IsAdmin:  true,
 			IsActive: true,
 		}
 		if err := tx.Create(&membership).Error; err != nil {
@@ -45,6 +162,20 @@ func CreateTeam(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Send email to Super Admin(s)
+	emailService, err := services.NewEmailService()
+	if err == nil {
+		var user models.User
+		database.DB.First(&user, userID)
+		
+		var superAdmins []models.User
+		database.DB.Where("is_super_admin = ?", true).Find(&superAdmins)
+		
+		for _, admin := range superAdmins {
+			emailService.SendTeamRequestEmail(admin.Email, user.Name, team.Name)
+		}
 	}
 
 	w.WriteHeader(http.StatusCreated)

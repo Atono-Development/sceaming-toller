@@ -102,6 +102,8 @@ func main() {
 				r.Post("/invitations", handlers.InviteMember)
 				r.Delete("/members/{memberID}", handlers.RemoveMember)
 				r.Get("/members/preferences", handlers.GetAllTeamMemberPreferences)
+				r.Put("/members/{memberID}/preferences", handlers.UpdateMemberPreferences)
+				r.Put("/members/{memberID}/pitcher", handlers.UpdateMemberPitcherStatus)
 			})
 		})
 	})

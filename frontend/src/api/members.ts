@@ -86,3 +86,29 @@ export const updateMyGender = async (teamId: string, gender: string) => {
   });
   return response.data;
 };
+
+// Admin-only functions
+
+export const updateMemberPreferences = async (
+  teamId: string,
+  memberId: string,
+  preferences: { position: string; preferenceRank: number }[]
+) => {
+  const response = await api.put(
+    `/teams/${teamId}/members/${memberId}/preferences`,
+    { preferences }
+  );
+  return response.data;
+};
+
+export const updateMemberPitcherStatus = async (
+  teamId: string,
+  memberId: string,
+  isPitcher: boolean
+) => {
+  const response = await api.put(
+    `/teams/${teamId}/members/${memberId}/pitcher`,
+    { isPitcher }
+  );
+  return response.data;
+};

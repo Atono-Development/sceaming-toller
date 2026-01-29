@@ -1,11 +1,15 @@
+import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTeamContext } from "../../contexts/TeamContext";
 import {
   getTeamMembers,
   removeMember,
   getAllTeamMemberPreferences,
+  updateMemberPreferences,
+  updateMemberPitcherStatus,
 } from "../../api/members";
 import { InviteMemberDialog } from "../../components/InviteMemberDialog";
+import { EditPlayerDialog } from "../../components/EditPlayerDialog";
 import {
   Table,
   TableBody,
@@ -16,7 +20,7 @@ import {
 } from "../../components/ui/table";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
-import { Trash2 } from "lucide-react";
+import { Trash2, Edit } from "lucide-react";
 import { useToast } from "../../hooks/use-toast";
 import { format } from "date-fns";
 import { MobileRosterCard } from "../../components/MobileRosterCard";
@@ -25,6 +29,10 @@ export function RosterPage() {
   const { currentTeam, isAdmin } = useTeamContext();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [editingMember, setEditingMember] = React.useState<{
+    member: any;
+    preferences: any[];
+  } | null>(null);
 
   const { data: members, isLoading } = useQuery({
     queryKey: ["teamMembers", currentTeam?.id],
@@ -68,9 +76,68 @@ export function RosterPage() {
     },
   });
 
+  const updatePreferencesMutation = useMutation({
+    mutationFn: ({ memberId, preferences }: { memberId: string; preferences: { position: string; preferenceRank: number }[] }) => {
+      if (!currentTeam) throw new Error("No team selected");
+      return updateMemberPreferences(currentTeam.id, memberId, preferences);
+    },
+  });
+
+  const updatePitcherMutation = useMutation({
+    mutationFn: ({ memberId, isPitcher }: { memberId: string; isPitcher: boolean }) => {
+      if (!currentTeam) throw new Error("No team selected");
+      return updateMemberPitcherStatus(currentTeam.id, memberId, isPitcher);
+    },
+  });
+
   const handleRemove = (memberId: string) => {
     if (confirm("Are you sure you want to remove this member?")) {
       removeMutation.mutate(memberId);
+    }
+  };
+
+  const handleEditPlayer = (member: any) => {
+    const preferences = memberPreferences?.find((p) => p.id === member.id);
+    setEditingMember({
+      member,
+      preferences: preferences?.preferences || [],
+    });
+  };
+
+  const handleSavePlayer = async (preferences: { position: string; preferenceRank: number }[], isPitcher: boolean) => {
+    if (!editingMember || !currentTeam) return;
+
+    try {
+      await Promise.all([
+        updatePreferencesMutation.mutateAsync({
+          memberId: editingMember.member.id,
+          preferences,
+        }),
+        updatePitcherMutation.mutateAsync({
+          memberId: editingMember.member.id,
+          isPitcher,
+        }),
+      ]);
+
+      queryClient.invalidateQueries({
+        queryKey: ["teamMembers", currentTeam.id],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["teamMemberPreferences", currentTeam.id],
+      });
+
+      toast({
+        title: "Success",
+        description: "Player settings updated successfully.",
+      });
+      setEditingMember(null);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update player settings.",
+      });
+      throw error;
     }
   };
 
@@ -180,19 +247,29 @@ export function RosterPage() {
                   </TableCell>
                   {isAdmin && (
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemove(member.id)}
-                        disabled={member.isAdmin}
-                        title={
-                          member.isAdmin
-                            ? "Cannot remove admin"
-                            : "Remove member"
-                        }
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditPlayer(member)}
+                          title="Edit player settings"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemove(member.id)}
+                          disabled={member.isAdmin}
+                          title={
+                            member.isAdmin
+                              ? "Cannot remove admin"
+                              : "Remove member"
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>
@@ -211,9 +288,20 @@ export function RosterPage() {
             isAdmin={isAdmin}
             preferences={memberPreferences?.find((p) => p.id === member.id)}
             onRemove={handleRemove}
+            onEdit={handleEditPlayer}
           />
         ))}
       </div>
+
+      {editingMember && (
+        <EditPlayerDialog
+          open={!!editingMember}
+          onOpenChange={(open) => !open && setEditingMember(null)}
+          member={editingMember.member}
+          currentPreferences={editingMember.preferences}
+          onSave={handleSavePlayer}
+        />
+      )}
     </div>
   );
 }

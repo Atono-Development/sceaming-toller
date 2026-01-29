@@ -305,3 +305,136 @@ func UpdateMyGender(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
 }
+
+// Admin-only handlers
+
+func UpdateMemberPreferences(w http.ResponseWriter, r *http.Request) {
+	teamIDStr := chi.URLParam(r, "teamID")
+	teamID, err := uuid.Parse(teamIDStr)
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+
+	memberIDStr := chi.URLParam(r, "memberID")
+	memberID, err := uuid.Parse(memberIDStr)
+	if err != nil {
+		http.Error(w, "Invalid member ID", http.StatusBadRequest)
+		return
+	}
+
+	// Find the team member
+	var teamMember models.TeamMember
+	if result := database.DB.Where("id = ? AND team_id = ? AND is_active = ?", memberID, teamID, true).First(&teamMember); result.Error != nil {
+		http.Error(w, "Team member not found", http.StatusNotFound)
+		return
+	}
+
+	var req UpdatePreferencesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate preferences (max 3, unique ranks 1-3)
+	if len(req.Preferences) > 3 {
+		http.Error(w, "Maximum 3 preferences allowed", http.StatusBadRequest)
+		return
+	}
+
+	// Validate ranks are unique and within 1-3
+	rankSet := make(map[int]bool)
+	for _, pref := range req.Preferences {
+		if pref.PreferenceRank < 1 || pref.PreferenceRank > 3 {
+			http.Error(w, "Preference rank must be between 1 and 3", http.StatusBadRequest)
+			return
+		}
+		if rankSet[pref.PreferenceRank] {
+			http.Error(w, "Preference ranks must be unique", http.StatusBadRequest)
+			return
+		}
+		rankSet[pref.PreferenceRank] = true
+	}
+
+	// Delete existing preferences
+	if result := database.DB.Where("team_member_id = ?", teamMember.ID).Delete(&models.TeamMemberPreference{}); result.Error != nil {
+		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Create new preferences
+	for _, pref := range req.Preferences {
+		newPref := models.TeamMemberPreference{
+			TeamMemberID:   teamMember.ID,
+			Position:       pref.Position,
+			PreferenceRank: pref.PreferenceRank,
+		}
+		if result := database.DB.Create(&newPref); result.Error != nil {
+			http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+func UpdateMemberPitcherStatus(w http.ResponseWriter, r *http.Request) {
+	teamIDStr := chi.URLParam(r, "teamID")
+	teamID, err := uuid.Parse(teamIDStr)
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+
+	memberIDStr := chi.URLParam(r, "memberID")
+	memberID, err := uuid.Parse(memberIDStr)
+	if err != nil {
+		http.Error(w, "Invalid member ID", http.StatusBadRequest)
+		return
+	}
+
+	// Find the team member
+	var teamMember models.TeamMember
+	if result := database.DB.Where("id = ? AND team_id = ? AND is_active = ?", memberID, teamID, true).First(&teamMember); result.Error != nil {
+		http.Error(w, "Team member not found", http.StatusNotFound)
+		return
+	}
+
+	var req struct {
+		IsPitcher bool `json:"isPitcher"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Update the role to include or remove pitcher
+	if req.IsPitcher {
+		if !strings.Contains(strings.ToLower(teamMember.Role), "pitcher") {
+			if teamMember.Role == "" {
+				teamMember.Role = "pitcher"
+			} else {
+				teamMember.Role = teamMember.Role + ",pitcher"
+			}
+		}
+	} else {
+		// Remove pitcher from role
+		roles := strings.Split(teamMember.Role, ",")
+		var newRoles []string
+		for _, role := range roles {
+			if strings.TrimSpace(strings.ToLower(role)) != "pitcher" {
+				newRoles = append(newRoles, strings.TrimSpace(role))
+			}
+		}
+		teamMember.Role = strings.Join(newRoles, ",")
+	}
+
+	if result := database.DB.Save(&teamMember); result.Error != nil {
+		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}

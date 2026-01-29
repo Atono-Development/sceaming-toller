@@ -1,7 +1,7 @@
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
-import { Trash2 } from "lucide-react";
+import { Trash2, Edit } from "lucide-react";
 import { format } from "date-fns";
 
 interface TeamMember {
@@ -30,6 +30,7 @@ interface MobileRosterCardProps {
   isAdmin: boolean;
   preferences?: MemberPreference;
   onRemove: (id: string) => void;
+  onEdit?: (member: TeamMember) => void;
 }
 
 export function MobileRosterCard({
@@ -37,6 +38,7 @@ export function MobileRosterCard({
   isAdmin,
   preferences,
   onRemove,
+  onEdit,
 }: MobileRosterCardProps) {
   return (
     <Card className="mb-4">
@@ -98,7 +100,17 @@ export function MobileRosterCard({
         )}
 
         {isAdmin && (
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-end gap-2 pt-2">
+            {onEdit && (
+              <Button
+                variant="ghost"
+                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                onClick={() => onEdit(member)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Settings
+              </Button>
+            )}
             <Button
               variant="ghost"
               className="text-red-600 hover:text-red-700 hover:bg-red-50"

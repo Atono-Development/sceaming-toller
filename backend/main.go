@@ -1,8 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -14,9 +14,19 @@ import (
 	"github.com/liam/screaming-toller/backend/internal/database"
 	"github.com/liam/screaming-toller/backend/internal/handlers"
 	"github.com/liam/screaming-toller/backend/internal/middleware"
+	"golang.org/x/time/rate"
 )
 
 func main() {
+	// Initialize Structured Logging
+	var handler slog.Handler
+	if os.Getenv("ENV") == "production" {
+		handler = slog.NewJSONHandler(os.Stdout, nil)
+	} else {
+		handler = slog.NewTextHandler(os.Stdout, nil)
+	}
+	slog.SetDefault(slog.New(handler))
+
 	// Initialize Database
 	database.InitDB()
 
@@ -41,9 +51,15 @@ func main() {
 		MaxAge:           300,
 	}))
 
+	// Auth Rate Limiter (10 requests per minute, burst of 20)
+	authLimiter := middleware.NewIPRateLimiter(rate.Every(time.Minute/10), 20)
+
 	// Public Routes
-	r.Post("/api/auth/register", handlers.Register)
-	r.Post("/api/auth/login", handlers.Login)
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RateLimitMiddleware(authLimiter))
+		r.Post("/api/auth/register", handlers.Register)
+		r.Post("/api/auth/login", handlers.Login)
+	})
 
 	// Protected Routes
 	r.Group(func(r chi.Router) {
@@ -115,7 +131,8 @@ func main() {
 	})
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status": "ok"}`))
 	})
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {

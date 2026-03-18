@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Turnstile } from "@marsidev/react-turnstile";
 import api from "../../lib/api";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -17,6 +18,7 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [captchaToken, setCaptchaToken] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -27,7 +29,7 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      await api.post("/auth/register", { name, email, password });
+      await api.post("/auth/register", { name, email, password, captchaToken });
       navigate("/login", {
         state: { message: "Registration successful! Please login." },
       });
@@ -96,9 +98,22 @@ export default function RegisterPage() {
                 required
               />
             </div>
+
+            <div className="flex justify-center py-2">
+              <Turnstile
+                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAAA-S3nS77vJ5V8d4"}
+                onSuccess={(token) => setCaptchaToken(token)}
+                onError={() => setError("Captcha failed to load.")}
+                onExpire={() => setCaptchaToken("")}
+              />
+            </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading || !captchaToken}
+            >
               {isLoading ? "Creating account..." : "Register"}
             </Button>
             <p className="text-sm text-center text-slate-600">

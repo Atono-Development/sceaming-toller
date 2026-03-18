@@ -101,7 +101,7 @@ export default function RegisterPage() {
 
             <div className="flex justify-center py-2">
               <Turnstile
-                siteKey="0x4AAAAAAA-S3nS77vJ5V8d4" // Cloudflare testing key: Always Pass
+                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAAA-S3nS77vJ5V8d4"}
                 onSuccess={(token) => setCaptchaToken(token)}
                 onError={() => setError("Captcha failed to load.")}
                 onExpire={() => setCaptchaToken("")}

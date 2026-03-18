@@ -17,6 +17,9 @@ services:
       - ./backend:/app
 
   frontend:
+    build:
+      context: ./frontend
+      target: builder
     # Vite dev server with HMR
     command: npm run dev -- --host
     volumes:

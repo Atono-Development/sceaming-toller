@@ -1,0 +1,28 @@
+# Local development overrides.
+# Run with: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# This file re-opens port 5432 so you can connect to Postgres via
+# a local GUI (TablePlus, pgAdmin, etc.) and mounts source for hot-reload.
+
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      target: builder
+    # Override CMD to use go run for hot-reload in dev
+    command: go run main.go
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    # Vite dev server with HMR
+    command: npm run dev -- --host
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  db:
+    ports:
+      - "5432:5432"

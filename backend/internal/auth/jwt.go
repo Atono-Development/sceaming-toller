@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"log"
 	"os"
 	"time"
 
@@ -9,12 +10,14 @@ import (
 	"github.com/google/uuid"
 )
 
-var jwtKey = []byte(os.Getenv("JWT_SECRET"))
+var jwtKey []byte
 
 func init() {
-	if len(jwtKey) == 0 {
-		jwtKey = []byte("default_secret_for_dev_only")
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		log.Fatal("FATAL: JWT_SECRET environment variable is required and must not be empty")
 	}
+	jwtKey = []byte(secret)
 }
 
 type Claims struct {

@@ -5,12 +5,10 @@ services:
     build: ./backend
     ports:
       - "8080:8080"
-    volumes:
-      - ./backend:/app
     env_file:
-      - ./backend/.env
+      - .env
     environment:
-      - DB_URL=postgres://user:password@db:5432/screaming_toller?sslmode=disable
+      - DB_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
     depends_on:
       - db
 
@@ -18,9 +16,6 @@ services:
     build: ./frontend
     ports:
       - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     environment:
       - VITE_API_URL=http://localhost:8080/api
     depends_on:
@@ -29,11 +24,11 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=screaming_toller
-    ports:
-      - "5432:5432"
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    # Port 5432 is intentionally NOT exposed to the host.
+    # The backend reaches Postgres via the internal Docker network only.
     volumes:
       - postgres_data:/var/lib/postgresql/data
 

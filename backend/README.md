@@ -19,26 +19,23 @@ Backend API for the Screaming Toller softball team management application.
 
 ### Environment Setup
 
-1. **Copy the example environment file**:
+1. **Copy the example environment file** (from the project root):
 
    ```bash
-   cp .env.example .env
+   cp ../.env.example ../.env
    ```
 
 2. **Configure environment variables** in `.env`:
 
    **Required for email functionality**:
-
    - `RESEND_API_KEY`: Your Resend API key (get one at https://resend.com)
    - `FROM_EMAIL`: Verified sender email address in Resend
    - `APP_URL`: Frontend URL (default: `http://localhost:5173`)
 
    **Required for production**:
-
    - `JWT_SECRET`: Secure random string for JWT signing
 
    **Optional** (defaults are set in docker-compose.yml):
-
    - `DB_URL`: PostgreSQL connection string
 
 ### Running Locally
@@ -73,18 +70,15 @@ Backend API for the Screaming Toller softball team management application.
 Email invitations are sent when team members are invited. To enable this feature:
 
 1. **Sign up for Resend**:
-
    - Go to https://resend.com
    - Create a free account (100 emails/day, 3,000/month)
 
 2. **Generate an API key**:
-
    - Navigate to API Keys in your Resend dashboard
    - Create a new API key
    - Copy the key (starts with `re_`)
 
 3. **Verify your domain** (for production):
-
    - Add your domain in Resend dashboard
    - Add DNS records as instructed
    - For development, you can use Resend's test domain
@@ -186,7 +180,6 @@ docker compose exec db psql -U user -d screaming_toller
    ```
 
 2. **Verify API key is valid**:
-
    - Log into Resend dashboard
    - Check API key status
    - Ensure it hasn't been revoked
@@ -211,7 +204,6 @@ docker compose exec db psql -U user -d screaming_toller
    ```
 
 2. **Check connection string**:
-
    - Default: `postgres://user:password@db:5432/screaming_toller?sslmode=disable`
 
 3. **Reset database**:
@@ -234,7 +226,6 @@ backend/
 │   ├── models/           # Database models
 │   └── services/         # Business logic services
 │       └── email.go      # Email service (Resend)
-├── .env.example          # Example environment variables
 ├── Dockerfile            # Docker configuration
 ├── go.mod               # Go dependencies
 ├── go.sum               # Go dependency checksums

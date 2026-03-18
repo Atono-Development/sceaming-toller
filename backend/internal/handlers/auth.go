@@ -2,7 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"net/url"
+	"os"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,9 +19,10 @@ import (
 )
 
 type RegisterRequest struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Name         string `json:"name"`
+	Email        string `json:"email"`
+	Password     string `json:"password"`
+	CaptchaToken string `json:"captchaToken"`
 }
 
 type LoginRequest struct {
@@ -33,6 +39,26 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Validation
+	if req.Name == "" {
+		http.Error(w, "Name is required", http.StatusBadRequest)
+		return
+	}
+	if !isValidEmail(req.Email) {
+		http.Error(w, "Invalid email format", http.StatusBadRequest)
+		return
+	}
+	if len(req.Password) < 8 {
+		http.Error(w, "Password must be at least 8 characters long", http.StatusBadRequest)
+		return
+	}
+
+	// Captcha Verification (Turnstile)
+	if err := verifyTurnstile(req.CaptchaToken); err != nil {
+		http.Error(w, "Captcha verification failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -146,3 +172,50 @@ func GetMe(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(user)
 }
+
+func isValidEmail(email string) bool {
+	re := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
+	return re.MatchString(strings.ToLower(email))
+}
+
+type TurnstileResponse struct {
+	Success     bool     `json:"success"`
+	ErrorCodes  []string `json:"error-codes"`
+	ChallengeTS string   `json:"challenge_ts"`
+	Hostname    string   `json:"hostname"`
+}
+
+func verifyTurnstile(token string) error {
+	secretKey := os.Getenv("TURNSTILE_SECRET_KEY")
+	if secretKey == "" {
+		// allow test tokens in dev
+		if token == "success" || token == "XXXX.DUMMY.TOKEN.XXXX" {
+			return nil
+		}
+		// return nil for now to not block if secrets aren't set up yet
+		return nil 
+	}
+
+	formData := url.Values{
+		"secret":   {secretKey},
+		"response": {token},
+	}
+
+	resp, err := http.PostForm("https://challenges.cloudflare.com/turnstile/v0/siteverify", formData)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	var result TurnstileResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return err
+	}
+
+	if !result.Success {
+		return fmt.Errorf("invalid captcha token: %v", result.ErrorCodes)
+	}
+
+	return nil
+}
+

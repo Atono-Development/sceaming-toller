@@ -1,9 +1,10 @@
 package middleware
 
 import (
+	"net"
 	"net/http"
+	"strings"
 	"sync"
-	"time"
 
 	"golang.org/x/time/rate"
 )
@@ -46,7 +47,11 @@ func (i *IPRateLimiter) GetLimiter(ip string) *rate.Limiter {
 func RateLimitMiddleware(limiter *IPRateLimiter) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ip := r.RemoteAddr
+			ip, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				ip = r.RemoteAddr
+			}
+
 			// Extract real IP if behind a proxy
 			realIP := r.Header.Get("X-Real-IP")
 			if realIP != "" {
@@ -54,7 +59,9 @@ func RateLimitMiddleware(limiter *IPRateLimiter) func(next http.Handler) http.Ha
 			}
 			forwarded := r.Header.Get("X-Forwarded-For")
 			if forwarded != "" {
-				ip = forwarded
+				// X-Forwarded-For can be a comma-separated list; take the first one
+				ips := strings.Split(forwarded, ",")
+				ip = strings.TrimSpace(ips[0])
 			}
 
 			if !limiter.GetLimiter(ip).Allow() {

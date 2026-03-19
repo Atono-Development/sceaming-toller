@@ -18,7 +18,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_TURNSTILE_SITE_KEY=${VITE_TURNSTILE_SITE_KEY}
+        - VITE_AUTH0_DOMAIN=${AUTH0_DOMAIN}
+        - VITE_AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
         - VITE_API_URL=${VITE_API_URL:-/api}
     ports:
       - "5173:80"

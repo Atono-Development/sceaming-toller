@@ -101,7 +101,7 @@ export default function RegisterPage() {
 
             <div className="flex justify-center py-2">
               <Turnstile
-                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAAA-S3nS77vJ5V8d4"}
+                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
                 onSuccess={(token) => setCaptchaToken(token)}
                 onError={() => setError("Captcha failed to load.")}
                 onExpire={() => setCaptchaToken("")}

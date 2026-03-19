@@ -3,6 +3,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Add build arguments for Vite
+# ARG VITE_API_URL
+ARG VITE_TURNSTILE_SITE_KEY
+
+# Set them as environment variables for the build process
+# ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_TURNSTILE_SITE_KEY=$VITE_TURNSTILE_SITE_KEY
+
 COPY package*.json ./
 RUN npm ci
 

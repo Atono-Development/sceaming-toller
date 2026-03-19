@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"net/http"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/liam/screaming-toller/backend/internal/auth"

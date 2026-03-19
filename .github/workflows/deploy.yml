@@ -18,6 +18,11 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            if [ ! -d "/app/.git" ]; then
+              echo "Error: /app is not a git repository."
+              echo "Please follow the deployment guide and clone the repository manually on the Droplet first."
+              exit 1
+            fi
             cd /app
             git pull origin main
             docker compose up -d --build

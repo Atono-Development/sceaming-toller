@@ -39,12 +39,17 @@ Add these secrets to your GitHub repository (**Settings > Secrets and variables 
 
 ## 4. First Deployment
 
-1. On the Droplet, create the production `.env` file in `/app`:
+1. On the Droplet, ensure you have logged out and back in after running the bootstrap script.
+2. Clone your repository into `/app` (if not already done):
    ```bash
-   cp deploy/.env.production.example .env
-   # Edit .env with your real production secrets
+   git clone <your-repo-url> /app
    ```
-2. Push your code to the `main` branch. GitHub Actions will handle the build and deploy.
+3. Create the production `.env` file in `/app`:
+   ```bash
+   cp deploy/.env.production.example /app/.env
+   # Edit /app/.env with your real production secrets
+   ```
+4. Push your code to the `main` branch. GitHub Actions will handle the build and deploy.
 
 ## 5. Super Admin Promotion
 

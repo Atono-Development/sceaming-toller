@@ -16,6 +16,13 @@ if ! command -v docker &> /dev/null; then
     rm get-docker.sh
 fi
 
+# Add current user to docker group if not already there
+if ! groups $USER | grep &>/dev/null "\bdocker\b"; then
+    echo "👥 Adding $USER to the docker group..."
+    usermod -aG docker $USER
+    echo "⚠️  IMPORTANT: You must log out and log back in (or start a new SSH session) for group changes to take effect."
+fi
+
 # 3. Install Nginx & Certbot
 echo "🌐 Installing Nginx & Certbot..."
 apt-get install -y nginx certbot python3-certbot-nginx
@@ -32,9 +39,11 @@ cd /app
 
 echo "✅ Bootstrap complete!"
 echo "Next steps:"
-echo "1. Clone your repo into /app"
-echo "2. Copy deploy/nginx/nginx.conf to /etc/nginx/sites-available/toller"
-echo "3. Link it: ln -s /etc/nginx/sites-available/toller /etc/nginx/sites-enabled/"
-echo "4. Create .env file"
-echo "5. Run: docker compose up -d --build"
-echo "6. Run: certbot --nginx"
+echo "1. IMPORTANT: Log out and back in to your SSH session to enable Docker permissions."
+echo "2. Clone your repository into /app:"
+echo "   git clone <your-repo-url> /app"
+echo "3. Copy deploy/nginx/nginx.conf to /etc/nginx/sites-available/toller"
+echo "4. Link it: ln -s /etc/nginx/sites-available/toller /etc/nginx/sites-enabled/"
+echo "5. Create .env file in /app"
+echo "6. Run: cd /app && docker compose up -d --build"
+echo "7. Run: certbot --nginx"

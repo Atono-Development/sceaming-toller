@@ -35,7 +35,7 @@ Add these secrets to your GitHub repository (**Settings > Secrets and variables 
 
 - `DROPLET_IP`: The IP address of your Droplet.
 - `SSH_PRIVATE_KEY`: A private key for access (public key must be in Droplet's `/root/.ssh/authorized_keys`).
-- `SSH_USER`: `root`.
+- `SSH_USER`: The username to SSH as (e.g. `root` or `toller`).
 
 ## 4. First Deployment
 

@@ -11,10 +11,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/liam/screaming-toller/backend/internal/auth"
 	"github.com/liam/screaming-toller/backend/internal/database"
 	"github.com/liam/screaming-toller/backend/internal/handlers"
 	"github.com/liam/screaming-toller/backend/internal/middleware"
-	"golang.org/x/time/rate"
 )
 
 func main() {

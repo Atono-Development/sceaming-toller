@@ -2,108 +2,107 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"net/url"
-	"os"
-	"regexp"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/liam/screaming-toller/backend/internal/auth"
 	"github.com/liam/screaming-toller/backend/internal/database"
 	"github.com/liam/screaming-toller/backend/internal/models"
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
-type RegisterRequest struct {
-	Name         string `json:"name"`
-	Email        string `json:"email"`
-	Password     string `json:"password"`
-	CaptchaToken string `json:"captchaToken"`
-}
-
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+type SyncRequest struct {
+	Email string `json:"email"`
+	Name  string `json:"name"`
 }
 
 type AuthResponse struct {
-	Token string      `json:"token"`
-	User  models.User `json:"user"`
+	User models.User `json:"user"`
 }
 
-func Register(w http.ResponseWriter, r *http.Request) {
-	var req RegisterRequest
+func SyncUser(w http.ResponseWriter, r *http.Request) {
+	auth0Sub, ok := r.Context().Value("auth0Sub").(string)
+	if !ok || auth0Sub == "" {
+		http.Error(w, "Unauthorized: missing Auth0 subject", http.StatusUnauthorized)
+		return
+	}
+
+	var req SyncRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Validation
-	if req.Name == "" {
-		http.Error(w, "Name is required", http.StatusBadRequest)
-		return
-	}
-	if !isValidEmail(req.Email) {
-		http.Error(w, "Invalid email format", http.StatusBadRequest)
-		return
-	}
-	if len(req.Password) < 8 {
-		http.Error(w, "Password must be at least 8 characters long", http.StatusBadRequest)
+	if req.Email == "" {
+		http.Error(w, "Email is required for syncing", http.StatusBadRequest)
 		return
 	}
 
-	// Captcha Verification (Turnstile)
-	if err := verifyTurnstile(req.CaptchaToken); err != nil {
-		http.Error(w, "Captcha verification failed: "+err.Error(), http.StatusBadRequest)
-		return
-	}
+	var user models.User
+	
+	// Transaction to safely check and create/update user and handle invites
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		// First check if user exists by Auth0 ID
+		result := tx.Where("auth0_id = ?", auth0Sub).First(&user)
+		
+		if result.Error != nil {
+			if result.Error == gorm.ErrRecordNotFound {
+				// User not found by auth0_id. Let's gracefully support matching by email just in case 
+				// (e.g., manual DB sync or legacy users testing the new login)
+				if err := tx.Where("email = ?", req.Email).First(&user).Error; err == nil {
+					// User exists by email, update their Auth0 ID
+					user.Auth0ID = auth0Sub
+					user.Name = req.Name // Update name from Auth0
+					if err := tx.Save(&user).Error; err != nil {
+						return err
+					}
+				} else {
+					// User doesn't exist by auth0_id OR email. Create a new one.
+					user = models.User{
+						Auth0ID: auth0Sub,
+						Name:    req.Name,
+						Email:   req.Email,
+					}
+					if err := tx.Create(&user).Error; err != nil {
+						return err
+					}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-	if err != nil {
-		http.Error(w, "Failed to hash password", http.StatusInternalServerError)
-		return
-	}
-
-	user := models.User{
-		Name:         req.Name,
-		Email:        req.Email,
-		PasswordHash: string(hashedPassword),
-	}
-
-	// Transaction to create user and accept any pending invitations
-	err = database.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(&user).Error; err != nil {
-			return err
-		}
-
-		// Check for invitations
-		var invitations []models.Invitation
-		if err := tx.Where("email = ? AND (expires_at > ? OR expires_at IS NULL) AND accepted_at IS NULL", user.Email, time.Now()).Find(&invitations).Error; err != nil {
-			// Just log error or ignore? Ideally we shouldn't fail registration if this fails, but better to be transactional.
-			// Proceeding without erroring out, assume no invites if error? No, let's just log.
-			// For simplicity in this plan, let's treat it as part of transaction.
-		}
-
-		for _, inv := range invitations {
-			member := models.TeamMember{
-				TeamID:   inv.TeamID,
-				UserID:   user.ID,
-				Role:     inv.Role,
-				IsActive: true,
-				JoinedAt: time.Now(),
+					// Process pending invitations for the new user email
+					var invitations []models.Invitation
+					if err := tx.Where("email = ? AND (expires_at > ? OR expires_at IS NULL) AND accepted_at IS NULL", user.Email, time.Now()).Find(&invitations).Error; err == nil {
+						for _, inv := range invitations {
+							member := models.TeamMember{
+								TeamID:   inv.TeamID,
+								UserID:   user.ID,
+								Role:     inv.Role,
+								IsActive: true,
+								JoinedAt: time.Now(),
+							}
+							// Default admin permissions mapping if Role == admin
+							if inv.Role == "admin" || inv.Role == "admin,pitcher" {
+								member.IsAdmin = true
+							}
+							
+							if err := tx.Create(&member).Error; err != nil {
+								return err
+							}
+							
+							now := time.Now()
+							inv.AcceptedAt = &now
+							if err := tx.Save(&inv).Error; err != nil {
+								return err
+							}
+						}
+					}
+				}
+			} else {
+				return result.Error // Some other DB error
 			}
-			if err := tx.Create(&member).Error; err != nil {
-				return err
-			}
-			
-			now := time.Now()
-			inv.AcceptedAt = &now
-			if err := tx.Save(&inv).Error; err != nil {
-				return err
+		} else {
+			// User found, maybe update their name if changed in Auth0
+			if user.Name != req.Name && req.Name != "" {
+				user.Name = req.Name
+				tx.Save(&user)
 			}
 		}
 		
@@ -111,56 +110,20 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		http.Error(w, "User already exists or database error", http.StatusConflict) // Could be specific
-		return
-	}
-
-	token, err := auth.GenerateToken(user.ID)
-	if err != nil {
-		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+		http.Error(w, "Failed to sync user: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	json.NewEncoder(w).Encode(AuthResponse{
-		Token: token,
-		User:  user,
-	})
-}
-
-func Login(w http.ResponseWriter, r *http.Request) {
-	var req LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var user models.User
-	if result := database.DB.Where("email = ?", req.Email).First(&user); result.Error != nil {
-		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
-		return
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
-		return
-	}
-
-	token, err := auth.GenerateToken(user.ID)
-	if err != nil {
-		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
-		return
-	}
-
-	json.NewEncoder(w).Encode(AuthResponse{
-		Token: token,
-		User:  user,
+		User: user,
 	})
 }
 
 func GetMe(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(uuid.UUID)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		// Middleware injects auth0Sub, but if userID is missing, local user isn't synced yet
+		http.Error(w, "Unauthorized or not synced locally", http.StatusUnauthorized)
 		return
 	}
 
@@ -172,48 +135,3 @@ func GetMe(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(user)
 }
-
-func isValidEmail(email string) bool {
-	re := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$`)
-	return re.MatchString(strings.ToLower(email))
-}
-
-type TurnstileResponse struct {
-	Success     bool     `json:"success"`
-	ErrorCodes  []string `json:"error-codes"`
-	ChallengeTS string   `json:"challenge_ts"`
-	Hostname    string   `json:"hostname"`
-}
-
-func verifyTurnstile(token string) error {
-	secretKey := os.Getenv("TURNSTILE_SECRET_KEY")
-	if secretKey == "" || secretKey == "1x000000000000000000000000000000AA" {
-		// allow test tokens in dev or when site secrets aren't set up
-		if token == "success" || token == "XXXX.DUMMY.TOKEN.XXXX" || secretKey == "" {
-			return nil
-		}
-	}
-
-	formData := url.Values{
-		"secret":   {secretKey},
-		"response": {token},
-	}
-
-	resp, err := http.PostForm("https://challenges.cloudflare.com/turnstile/v0/siteverify", formData)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	var result TurnstileResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return err
-	}
-
-	if !result.Success {
-		return fmt.Errorf("invalid captcha token: %v", result.ErrorCodes)
-	}
-
-	return nil
-}
-

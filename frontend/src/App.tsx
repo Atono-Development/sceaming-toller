@@ -7,7 +7,6 @@ import {
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TeamProvider } from "./contexts/TeamContext";
 import LoginPage from "./pages/auth/LoginPage";
-import RegisterPage from "./pages/auth/RegisterPage";
 import Dashboard from "./pages/Dashboard";
 import PlayerDashboard from "./pages/PlayerDashboard";
 import { CreateTeamPage } from "./pages/teams/CreateTeamPage";
@@ -42,7 +41,7 @@ function App() {
         <TeamProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/callback" element={<div className="flex h-screen items-center justify-center">Loading...</div>} />
             <Route element={<Layout />}>
               <Route
                 path="/"

@@ -30,6 +30,9 @@ func main() {
 	// Initialize Database
 	database.InitDB()
 
+	// Initialize Auth0 JWKS Validator
+	auth.InitAuth0()
+
 	r := chi.NewRouter()
 
 	// Middleware
@@ -51,19 +54,15 @@ func main() {
 		MaxAge:           300,
 	}))
 
-	// Auth Rate Limiter (10 requests per minute, burst of 20)
-	authLimiter := middleware.NewIPRateLimiter(rate.Every(time.Minute/10), 20)
-
-	// Public Routes
+	// Public Routes (None currently needed, but keeping group for future)
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.RateLimitMiddleware(authLimiter))
-		r.Post("/api/auth/register", handlers.Register)
-		r.Post("/api/auth/login", handlers.Login)
+		// e.g. webhooks
 	})
 
 	// Protected Routes
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware)
+		r.Post("/api/auth/sync", handlers.SyncUser) // Auto-provisions or syncs local DB user from Auth0 Token
 		r.Get("/api/auth/me", handlers.GetMe)
 		r.Post("/api/teams", handlers.CreateTeam)
 		r.Get("/api/teams", handlers.GetTeams)

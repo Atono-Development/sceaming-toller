@@ -174,7 +174,7 @@ func GetMe(w http.ResponseWriter, r *http.Request) {
 }
 
 func isValidEmail(email string) bool {
-	re := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
+	re := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$`)
 	return re.MatchString(strings.ToLower(email))
 }
 
@@ -187,13 +187,11 @@ type TurnstileResponse struct {
 
 func verifyTurnstile(token string) error {
 	secretKey := os.Getenv("TURNSTILE_SECRET_KEY")
-	if secretKey == "" {
-		// allow test tokens in dev
-		if token == "success" || token == "XXXX.DUMMY.TOKEN.XXXX" {
+	if secretKey == "" || secretKey == "1x000000000000000000000000000000AA" {
+		// allow test tokens in dev or when site secrets aren't set up
+		if token == "success" || token == "XXXX.DUMMY.TOKEN.XXXX" || secretKey == "" {
 			return nil
 		}
-		// return nil for now to not block if secrets aren't set up yet
-		return nil 
 	}
 
 	formData := url.Values{

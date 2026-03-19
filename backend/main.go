@@ -70,6 +70,7 @@ func main() {
 
 		// Admin Routes (Global)
 		r.Route("/api/admin", func(r chi.Router) {
+			r.Use(middleware.RequireSuperAdmin)
 			r.Get("/teams/pending", handlers.GetPendingTeams)
 			r.Post("/teams/{teamID}/approve", handlers.ApproveTeam)
 			r.Post("/teams/{teamID}/reject", handlers.RejectTeam)

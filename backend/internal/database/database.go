@@ -47,6 +47,9 @@ func InitDB() {
 
 	// Custom data migration for Roles
 	migrateRoles(DB)
+	
+	// Custom data migration for Auth0
+	migrateAuth0(DB)
 }
 
 func migrateRoles(db *gorm.DB) {
@@ -77,6 +80,20 @@ func migrateRoles(db *gorm.DB) {
 			log.Printf("Failed to migrate member %s: %v", member.ID, err)
 		} else {
 			log.Printf("Migrated member %s (IsAdmin=true)", member.ID)
+		}
+	}
+}
+
+func migrateAuth0(db *gorm.DB) {
+	// GORM's AutoMigrate does not drop columns.
+	// We are doing a hard cutover to Auth0, so we drop the old password_hash column.
+	if db.Migrator().HasColumn(&models.User{}, "password_hash") {
+		log.Println("Dropping legacy password_hash column from users table...")
+		err := db.Migrator().DropColumn(&models.User{}, "password_hash")
+		if err != nil {
+			log.Printf("Failed to drop password_hash column: %v", err)
+		} else {
+			log.Println("Successfully dropped password_hash column.")
 		}
 	}
 }

@@ -53,6 +53,18 @@ export function MobileMenu() {
             </div>
           )}
 
+          {user?.isSuperAdmin && (
+            <nav className="flex flex-col space-y-2 mt-2">
+              <Button
+                variant="ghost"
+                className="justify-start h-12 text-base text-indigo-600 font-semibold"
+                onClick={() => handleNavigation('/admin/teams')}
+              >
+                Admin Dashboard
+              </Button>
+            </nav>
+          )}
+
           {currentTeam && currentTeam.status !== "pending" && (
             <nav className="flex flex-col space-y-2">
               <Button

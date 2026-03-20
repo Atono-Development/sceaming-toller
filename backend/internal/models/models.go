@@ -9,9 +9,9 @@ import (
 
 type User struct {
 	ID           uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	Auth0ID      string    `gorm:"uniqueIndex" json:"auth0Id"` // Auth0 "sub" claim
 	Name         string    `json:"name"`
 	Email        string    `gorm:"uniqueIndex" json:"email"`
-	PasswordHash string    `json:"-"`
 	IsSuperAdmin bool      `gorm:"default:false" json:"isSuperAdmin"`
 	CreatedAt    time.Time `json:"createdAt"`
 	UpdatedAt    time.Time `json:"updatedAt"`

@@ -32,6 +32,16 @@ export default function Layout() {
                 </span>
               )}
 
+              {user?.isSuperAdmin && (
+                <Button
+                  variant="ghost"
+                  className="hidden md:inline-flex text-indigo-600 font-semibold px-2"
+                  onClick={() => navigate('/admin/teams')}
+                >
+                  Admin
+                </Button>
+              )}
+
               {currentTeam && currentTeam.status !== "pending" && (
                 <nav className="hidden md:flex md:items-center md:space-x-2">
                   <Button

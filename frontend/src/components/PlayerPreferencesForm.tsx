@@ -19,6 +19,8 @@ import {
   type TeamMemberPreference,
 } from "../api/members";
 import { useToast } from "../hooks/use-toast";
+import { useAuth } from "../contexts/AuthContext";
+import { updateMe } from "../api/auth";
 
 const POSITIONS = ["1B", "2B", "3B", "SS", "LF", "CF", "RF", "C", "Rover"];
 
@@ -34,7 +36,9 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
   const [gender, setGender] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [name, setName] = useState("");
   const { toast } = useToast();
+  const { user, updateUser } = useAuth();
 
   useEffect(() => {
     loadPreferences();
@@ -49,6 +53,11 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
       setPreferences(preferencesData);
       setIsPitcher(memberInfo.role.includes("pitcher"));
       setGender(memberInfo.gender || "");
+      
+      // Initialize name from auth user if not set
+      if (user && !name) {
+        setName(user.name || "");
+      }
     } catch {
       toast({
         title: "Error",
@@ -114,6 +123,12 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
         await updateMyGender(teamId, gender);
       }
 
+      // Save name if changed
+      if (user && name !== user.name) {
+        const updatedUser = await updateMe(name);
+        updateUser(updatedUser);
+      }
+
       toast({
         title: "Success",
         description: "Preferences saved successfully",
@@ -158,6 +173,21 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
         </div>
 
         <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Display Name</Label>
+            <input
+              id="name"
+              type="text"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your display name"
+            />
+            <div className="text-sm text-muted-foreground">
+              This is how your name will appear in lineups and rosters.
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="gender">Gender</Label>
             <Select

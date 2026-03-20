@@ -20,6 +20,10 @@ type AuthResponse struct {
 	User models.User `json:"user"`
 }
 
+type UpdateUserRequest struct {
+	Name string `json:"name"`
+}
+
 func SyncUser(w http.ResponseWriter, r *http.Request) {
 	auth0Sub, ok := r.Context().Value("auth0Sub").(string)
 	if !ok || auth0Sub == "" {
@@ -143,6 +147,39 @@ func GetMe(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if result := database.DB.First(&user, userID); result.Error != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	json.NewEncoder(w).Encode(user)
+}
+
+func UpdateMe(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(uuid.UUID)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req UpdateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Name == "" {
+		http.Error(w, "Name is required", http.StatusBadRequest)
+		return
+	}
+
+	var user models.User
+	if result := database.DB.First(&user, userID); result.Error != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	user.Name = req.Name
+	if result := database.DB.Save(&user); result.Error != nil {
+		http.Error(w, "Failed to update user", http.StatusInternalServerError)
 		return
 	}
 

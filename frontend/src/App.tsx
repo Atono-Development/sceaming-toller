@@ -1,9 +1,11 @@
 import {
-  BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
+  useLocation,
+  useNavigate,
 } from "react-router-dom";
+import { Auth0Provider } from "@auth0/auth0-react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TeamProvider } from "./contexts/TeamContext";
 import LoginPage from "./pages/auth/LoginPage";
@@ -22,13 +24,15 @@ import Layout from "./components/Layout";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return <div>Loading...</div>;
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // Save the current location to redirect back after login
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   return children;
@@ -64,8 +68,27 @@ const CallbackRoute = () => {
 };
 
 function App() {
+  const navigate = useNavigate();
+
+  const domain = import.meta.env.VITE_AUTH0_DOMAIN || "";
+  const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID || "";
+  // Default to the origin + /api if no audience is explicitly set
+  const audience = import.meta.env.VITE_AUTH0_AUDIENCE || (window.location.origin + "/api");
+
+  const onRedirectCallback = (appState: any) => {
+    navigate(appState?.returnTo || "/");
+  };
+
   return (
-    <Router>
+    <Auth0Provider
+      domain={domain}
+      clientId={clientId}
+      authorizationParams={{
+        redirect_uri: window.location.origin + "/callback",
+        audience: audience,
+      }}
+      onRedirectCallback={onRedirectCallback}
+    >
       <AuthProvider>
         <TeamProvider>
           <Routes>
@@ -165,7 +188,7 @@ function App() {
           </Routes>
         </TeamProvider>
       </AuthProvider>
-    </Router>
+    </Auth0Provider>
   );
 }
 

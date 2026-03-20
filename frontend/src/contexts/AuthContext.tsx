@@ -13,7 +13,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: () => void;
+  login: (redirectPath?: string) => void;
   logout: () => void;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -83,8 +83,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [isAuthenticated, auth0IsLoading, auth0User, getAccessTokenSilently]);
 
-  const login = () => {
-    loginWithRedirect();
+  const login = (redirectPath?: string) => {
+    loginWithRedirect({
+      appState: { returnTo: redirectPath || window.location.pathname }
+    });
   };
 
   const logout = () => {

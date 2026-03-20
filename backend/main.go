@@ -64,6 +64,7 @@ func main() {
 		r.Use(middleware.AuthMiddleware)
 		r.Post("/api/auth/sync", handlers.SyncUser) // Auto-provisions or syncs local DB user from Auth0 Token
 		r.Get("/api/auth/me", handlers.GetMe)
+		r.Put("/api/auth/me", handlers.UpdateMe)
 		r.Post("/api/teams", handlers.CreateTeam)
 		r.Get("/api/teams", handlers.GetTeams)
 

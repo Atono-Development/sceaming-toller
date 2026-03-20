@@ -1,3 +1,4 @@
+import { useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { Button } from "../../components/ui/button";
 import {
@@ -10,6 +11,8 @@ import {
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const location = useLocation();
+  const from = (location.state as any)?.from || "/";
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-50">
@@ -23,7 +26,7 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center pt-4">
-          <Button onClick={login} className="w-full py-6 text-lg">
+          <Button onClick={() => login(from)} className="w-full py-6 text-lg">
             Continue to Login
           </Button>
         </CardContent>

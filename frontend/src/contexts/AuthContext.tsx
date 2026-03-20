@@ -13,11 +13,12 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: () => void;
+  login: (redirectPath?: string) => void;
   logout: () => void;
   isLoading: boolean;
   isAuthenticated: boolean;
   syncError: string | null;
+  updateUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -83,8 +84,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [isAuthenticated, auth0IsLoading, auth0User, getAccessTokenSilently]);
 
-  const login = () => {
-    loginWithRedirect();
+  const login = (redirectPath?: string) => {
+    loginWithRedirect({
+      appState: { returnTo: redirectPath || window.location.pathname }
+    });
   };
 
   const logout = () => {
@@ -106,6 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         isAuthenticated: isFullyAuthenticated,
         syncError,
+        updateUser: setLocalUser,
       }}
     >
       {children}

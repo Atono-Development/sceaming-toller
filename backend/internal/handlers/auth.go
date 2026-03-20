@@ -20,6 +20,10 @@ type AuthResponse struct {
 	User models.User `json:"user"`
 }
 
+type UpdateUserRequest struct {
+	Name string `json:"name"`
+}
+
 func SyncUser(w http.ResponseWriter, r *http.Request) {
 	auth0Sub, ok := r.Context().Value("auth0Sub").(string)
 	if !ok || auth0Sub == "" {
@@ -68,34 +72,6 @@ func SyncUser(w http.ResponseWriter, r *http.Request) {
 					if err := tx.Create(&user).Error; err != nil {
 						return err
 					}
-
-					// Process pending invitations for the new user email
-					var invitations []models.Invitation
-					if err := tx.Where("email = ? AND (expires_at > ? OR expires_at IS NULL) AND accepted_at IS NULL", user.Email, time.Now()).Find(&invitations).Error; err == nil {
-						for _, inv := range invitations {
-							member := models.TeamMember{
-								TeamID:   inv.TeamID,
-								UserID:   user.ID,
-								Role:     inv.Role,
-								IsActive: true,
-								JoinedAt: time.Now(),
-							}
-							// Default admin permissions mapping if Role == admin
-							if inv.Role == "admin" || inv.Role == "admin,pitcher" {
-								member.IsAdmin = true
-							}
-							
-							if err := tx.Create(&member).Error; err != nil {
-								return err
-							}
-							
-							now := time.Now()
-							inv.AcceptedAt = &now
-							if err := tx.Save(&inv).Error; err != nil {
-								return err
-							}
-						}
-					}
 				}
 			} else {
 				return result.Error // Some other DB error
@@ -105,6 +81,45 @@ func SyncUser(w http.ResponseWriter, r *http.Request) {
 			if user.Name == "" && req.Name != "" {
 				user.Name = req.Name
 				tx.Save(&user)
+			}
+		}
+
+		// Process pending invitations for the user email (always, for new and existing users)
+		var invitations []models.Invitation
+		// Use LOWER() for case-insensitive matching
+		if err := tx.Where("LOWER(email) = LOWER(?) AND (expires_at > ? OR expires_at IS NULL) AND accepted_at IS NULL", user.Email, time.Now()).Find(&invitations).Error; err == nil {
+			for _, inv := range invitations {
+				// Check if already a member to avoid duplicate membership records
+				var existingMember models.TeamMember
+				if err := tx.Where("team_id = ? AND user_id = ?", inv.TeamID, user.ID).First(&existingMember).Error; err == nil {
+					// Already a member, just mark invitation as accepted if it isn't already
+					now := time.Now()
+					inv.AcceptedAt = &now
+					tx.Save(&inv)
+					continue
+				}
+
+				member := models.TeamMember{
+					TeamID:   inv.TeamID,
+					UserID:   user.ID,
+					Role:     inv.Role,
+					IsActive: true,
+					JoinedAt: time.Now(),
+				}
+				// Default admin permissions mapping if Role == admin
+				if inv.Role == "admin" || inv.Role == "admin,pitcher" {
+					member.IsAdmin = true
+				}
+				
+				if err := tx.Create(&member).Error; err != nil {
+					return err
+				}
+				
+				now := time.Now()
+				inv.AcceptedAt = &now
+				if err := tx.Save(&inv).Error; err != nil {
+					return err
+				}
 			}
 		}
 		
@@ -132,6 +147,39 @@ func GetMe(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if result := database.DB.First(&user, userID); result.Error != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	json.NewEncoder(w).Encode(user)
+}
+
+func UpdateMe(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(uuid.UUID)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req UpdateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Name == "" {
+		http.Error(w, "Name is required", http.StatusBadRequest)
+		return
+	}
+
+	var user models.User
+	if result := database.DB.First(&user, userID); result.Error != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	user.Name = req.Name
+	if result := database.DB.Save(&user); result.Error != nil {
+		http.Error(w, "Failed to update user", http.StatusInternalServerError)
 		return
 	}
 

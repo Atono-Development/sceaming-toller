@@ -52,7 +52,9 @@ func SyncUser(w http.ResponseWriter, r *http.Request) {
 				if err := tx.Where("email = ?", req.Email).First(&user).Error; err == nil {
 					// User exists by email, update their Auth0 ID
 					user.Auth0ID = auth0Sub
-					user.Name = req.Name // Update name from Auth0
+					if user.Name == "" {
+						user.Name = req.Name // Only update name from Auth0 if currently empty
+					}
 					if err := tx.Save(&user).Error; err != nil {
 						return err
 					}
@@ -99,8 +101,8 @@ func SyncUser(w http.ResponseWriter, r *http.Request) {
 				return result.Error // Some other DB error
 			}
 		} else {
-			// User found, maybe update their name if changed in Auth0
-			if user.Name != req.Name && req.Name != "" {
+			// User found, maybe update their name if changed in Auth0 and currently empty in DB
+			if user.Name == "" && req.Name != "" {
 				user.Name = req.Name
 				tx.Save(&user)
 			}

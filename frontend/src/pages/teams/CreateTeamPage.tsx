@@ -57,7 +57,7 @@ export const CreateTeamPage: React.FC = () => {
             An admin will review your request. You'll receive an email upon approval.
           </CardContent>
           <CardFooter>
-            <Button onClick={() => navigate('/')} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Button onClick={() => navigate('/')} className="w-full bg-orange-600 hover:bg-orange-700 text-white">
               Back to Dashboard
             </Button>
           </CardFooter>
@@ -82,7 +82,7 @@ export const CreateTeamPage: React.FC = () => {
               <Input
                 id="name"
                 placeholder="e.g. The Screaming Tollers"
-                className="border-slate-300 focus:ring-indigo-500"
+                className="border-slate-300 focus:ring-orange-500"
                 {...register('name')}
               />
               {errors.name && (
@@ -94,7 +94,7 @@ export const CreateTeamPage: React.FC = () => {
               <Input
                 id="description"
                 placeholder="e.g. Sunday night recreational league"
-                className="border-slate-300 focus:ring-indigo-500"
+                className="border-slate-300 focus:ring-orange-500"
                 {...register('description')}
               />
             </div>
@@ -103,7 +103,7 @@ export const CreateTeamPage: React.FC = () => {
               <Input
                 id="league"
                 placeholder="e.g. City Parks & Rec"
-                className="border-slate-300 focus:ring-indigo-500"
+                className="border-slate-300 focus:ring-orange-500"
                 {...register('league')}
               />
               {errors.league && (
@@ -115,7 +115,7 @@ export const CreateTeamPage: React.FC = () => {
               <Input
                 id="season"
                 placeholder="e.g. Summer 2024"
-                className="border-slate-300 focus:ring-indigo-500"
+                className="border-slate-300 focus:ring-orange-500"
                 {...register('season')}
               />
               {errors.season && (
@@ -124,7 +124,7 @@ export const CreateTeamPage: React.FC = () => {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-2 pt-4">
-            <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white" disabled={isSubmitting}>
+            <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white" disabled={isSubmitting}>
               {isSubmitting ? 'Creating...' : 'Create Team'}
             </Button>
             <Button variant="ghost" type="button" className="w-full text-slate-500 hover:text-slate-700" onClick={() => navigate('/')}>

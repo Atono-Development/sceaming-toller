@@ -19,9 +19,9 @@ export default function Layout() {
               <MobileMenu />
               <Link
                 to="/"
-                className="text-xl font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
+                className="text-xl font-bold text-orange-600 hover:text-orange-500 transition-colors"
               >
-                Screaming Toller
+                Toller Ball
               </Link>
             </div>
 
@@ -35,7 +35,7 @@ export default function Layout() {
               {user?.isSuperAdmin && (
                 <Button
                   variant="ghost"
-                  className="hidden md:inline-flex text-indigo-600 font-semibold px-2"
+                  className="hidden md:inline-flex text-orange-600 font-semibold px-2"
                   onClick={() => navigate('/admin/teams')}
                 >
                   Admin

@@ -16,10 +16,10 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            Welcome to Screaming Toller
+            Welcome to The Toller Dome
           </CardTitle>
           <CardDescription className="text-center">
-            Log in or sign up to manage your teams
+            Log in or sign up for toller ball
           </CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center pt-4">

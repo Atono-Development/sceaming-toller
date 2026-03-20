@@ -17,6 +17,7 @@ interface AuthContextType {
   logout: () => void;
   isLoading: boolean;
   isAuthenticated: boolean;
+  syncError: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,14 +34,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [localUser, setLocalUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [hasAttemptedSync, setHasAttemptedSync] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
     const syncUser = async () => {
       if (isAuthenticated && auth0User) {
-        setIsSyncing(true);
         try {
           const accessToken = await getAccessTokenSilently();
           if (!isMounted) return;
@@ -55,15 +56,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: auth0User.name || auth0User.nickname || auth0User.email,
           });
 
-          if (isMounted) setLocalUser(syncResponse.data.user);
-        } catch (error) {
+          if (isMounted) {
+            setLocalUser(syncResponse.data.user);
+            setSyncError(null);
+          }
+        } catch (error: any) {
           console.error("Failed to sync Auth0 user with local backend", error);
+          if (isMounted) {
+            setSyncError(error?.response?.data || error?.message || "Unknown sync error");
+          }
         } finally {
-          if (isMounted) setIsSyncing(false);
+          if (isMounted) setHasAttemptedSync(true);
         }
       } else if (!isAuthenticated && !auth0IsLoading) {
         setToken(null);
         setLocalUser(null);
+        if (isMounted) setHasAttemptedSync(true);
         delete api.defaults.headers.common["Authorization"];
       }
     };
@@ -84,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // The app is "loading" if either Auth0 is loading its SDK state, OR we are syncing with the backend
-  const isLoading = auth0IsLoading || (isAuthenticated && isSyncing);
+  const isLoading = auth0IsLoading || (isAuthenticated && !hasAttemptedSync);
   // The app is "authenticated" ONLY after we have successfully synced the local DB user
   const isFullyAuthenticated = isAuthenticated && !!localUser;
 
@@ -97,6 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         isLoading,
         isAuthenticated: isFullyAuthenticated,
+        syncError,
       }}
     >
       {children}

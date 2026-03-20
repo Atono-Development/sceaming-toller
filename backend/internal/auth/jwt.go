@@ -39,14 +39,15 @@ func InitAuth0() {
 
 	provider := jwks.NewCachingProvider(issuerURL, 5*time.Minute)
 
-	// We use the application URL or allowed origins to determine audience if AUTH0_AUDIENCE isn't set
+	// We use the first allowed origin to determine audience if AUTH0_AUDIENCE isn't set
 	audience := os.Getenv("AUTH0_AUDIENCE")
 	if audience == "" {
-		appURL := os.Getenv("APP_URL")
-		if appURL != "" {
-			audience = strings.TrimRight(appURL, "/") + "/api"
+		allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+		if allowedOrigins != "" {
+			firstOrigin := strings.Split(allowedOrigins, ",")[0]
+			audience = strings.TrimRight(firstOrigin, "/") + "/api"
 		} else {
-			audience = "https://yourdomain.com/api" // fallback if neither is set
+			audience = "http://localhost:5173/api" // fallback if nothing is set
 		}
 	}
 

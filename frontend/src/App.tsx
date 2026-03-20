@@ -34,6 +34,35 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return children;
 };
 
+const CallbackRoute = () => {
+  const { isLoading, isAuthenticated, syncError, logout } = useAuth();
+
+  if (isLoading) {
+    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  }
+
+  if (syncError) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center space-y-4 p-4 text-center">
+        <h1 className="text-2xl font-bold text-red-600">Login Sync Failed</h1>
+        <p className="text-gray-700 max-w-md">{syncError}</p>
+        <button 
+          onClick={logout} 
+          className="px-6 py-2 bg-slate-800 text-white rounded font-medium mt-4 hover:bg-slate-700 transition"
+        >
+          Return to Login
+        </button>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <Navigate to="/login" replace />;
+};
+
 function App() {
   return (
     <Router>
@@ -41,7 +70,7 @@ function App() {
         <TeamProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/callback" element={<div className="flex h-screen items-center justify-center">Loading...</div>} />
+            <Route path="/callback" element={<CallbackRoute />} />
             <Route element={<Layout />}>
               <Route
                 path="/"

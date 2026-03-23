@@ -1,14 +1,7 @@
-import { Outlet, Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import { useTeamContext } from "../contexts/TeamContext";
-import { Button } from "@/components/ui/button";
-import { TeamSelector } from "@/components/TeamSelector";
+import { Outlet, Link } from "react-router-dom";
 import { MobileMenu } from "@/components/MobileMenu";
 
 export default function Layout() {
-  const { user, logout } = useAuth();
-  const { currentTeam } = useTeamContext();
-  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -26,58 +19,7 @@ export default function Layout() {
             </div>
 
             <div className="flex items-center space-x-4">
-              {user && (
-                <span className="text-sm text-slate-500 hidden md:inline-block">
-                  Welcome, {user.name}
-                </span>
-              )}
-
-              {user?.isSuperAdmin && (
-                <Button
-                  variant="ghost"
-                  className="hidden md:inline-flex text-orange-600 font-semibold px-2"
-                  onClick={() => navigate('/admin/teams')}
-                >
-                  Admin
-                </Button>
-              )}
-
-              {currentTeam && currentTeam.status !== "pending" && (
-                <nav className="hidden md:flex md:items-center md:space-x-2">
-                  <Button
-                    variant="ghost"
-                    onClick={() => navigate(`/teams/${currentTeam.id}/games`)}
-                  >
-                    Schedule
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => navigate(`/teams/${currentTeam.id}/roster`)}
-                  >
-                    Roster
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => navigate(`/teams/${currentTeam.id}/lineup`)}
-                  >
-                    Lineup
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => navigate(`/teams/${currentTeam.id}/profile`)}
-                  >
-                    Profile
-                  </Button>
-                </nav>
-              )}
-
-              <div className="hidden md:block">
-                <TeamSelector />
-              </div>
-
-              <Button variant="outline" onClick={logout} className="hidden md:flex">
-                Logout
-              </Button>
+              {/* Desktop links removed, now in MobileMenu */}
             </div>
           </div>
         </div>

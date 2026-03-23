@@ -35,7 +35,7 @@ export function MobileMenu() {
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden"
+          className=""
           aria-label="Open menu"
         >
           <Menu className="h-6 w-6" />
@@ -57,7 +57,7 @@ export function MobileMenu() {
             <nav className="flex flex-col space-y-2 mt-2">
               <Button
                 variant="ghost"
-                className="justify-start h-12 text-base text-indigo-600 font-semibold"
+                className="justify-start h-12 text-base text-orange-600 font-semibold"
                 onClick={() => handleNavigation('/admin/teams')}
               >
                 Admin Dashboard

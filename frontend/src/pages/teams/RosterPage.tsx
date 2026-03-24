@@ -24,6 +24,7 @@ import { Trash2, Edit } from "lucide-react";
 import { useToast } from "../../hooks/use-toast";
 import { format } from "date-fns";
 import { MobileRosterCard } from "../../components/MobileRosterCard";
+import { LogoUpload } from "../../components/LogoUpload";
 
 export function RosterPage() {
   const { currentTeam, isAdmin } = useTeamContext();
@@ -155,6 +156,8 @@ export function RosterPage() {
         <h1 className="text-3xl font-bold tracking-tight">Team Roster</h1>
         {isAdmin && <InviteMemberDialog />}
       </div>
+
+      {isAdmin && <LogoUpload />}
 
       <div className="rounded-md border hidden md:block">
         <Table>

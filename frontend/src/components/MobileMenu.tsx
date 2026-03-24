@@ -76,7 +76,7 @@ export function MobileMenu() {
                 className="justify-start h-12 text-base"
                 onClick={() => handleNavigation(`/teams/${currentTeam.id}/games`)}
               >
-                Schedule
+                Schedule & Scores
               </Button>
               <Button
                 variant="ghost"

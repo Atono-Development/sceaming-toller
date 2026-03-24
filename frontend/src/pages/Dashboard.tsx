@@ -130,14 +130,14 @@ export default function Dashboard() {
             <p className="text-lg font-medium">Welcome back, {user?.name}</p>
           </div>
           {currentTeam && (
-            <div className="mt-4 md:mt-0 px-4 py-2 bg-black text-white font-bold uppercase tracking-widest text-sm">
+            <div className="mt-4 md:mt-0 px-4 py-2 bg-orange-600 text-white font-bold uppercase tracking-widest text-sm">
               {currentTeam.name}
             </div>
           )}
         </header>
 
         {currentTeam?.status === "pending" ? (
-          <div className="border-4 border-black p-6 bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+          <div className="border-4 border-orange-600 p-6 bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
             <h2 className="text-2xl font-black uppercase mb-2">Review Pending</h2>
             <p className="font-medium">
               Your team "{currentTeam.name}" is currently being reviewed. You will be notified via email once approved.
@@ -147,14 +147,14 @@ export default function Dashboard() {
           <div className="space-y-8">
             {/* Next Game Hero Section */}
             {upcomingGames.length > 0 && (
-              <section className="border-4 border-black p-0 overflow-hidden bg-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+              <section className="border-4 border-orange-600 p-0 overflow-hidden bg-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
                 <div className="bg-black text-white p-3 px-6 flex justify-between items-center">
                   <h2 className="text-xl font-black uppercase tracking-tight">Next Game</h2>
                   <span className="font-bold uppercase text-sm tracking-widest">Upcoming</span>
                 </div>
                 <div className="p-6 md:p-8 lg:p-10 flex flex-col lg:flex-row gap-8 items-center lg:items-stretch">
                   {/* Logo Placeholder */}
-                  <div className="w-32 h-32 md:w-48 md:h-48 border-4 border-black flex items-center justify-center p-4 flex-shrink-0 bg-white">
+                  <div className="w-32 h-32 md:w-48 md:h-48 border-4 border-orange-600 flex items-center justify-center p-4 flex-shrink-0 bg-white">
                     <div className="text-center">
                       <div className="text-4xl md:text-6xl mb-2">🥎</div>
                       <div className="text-xs font-black uppercase leading-tight">Team Logo</div>
@@ -186,10 +186,10 @@ export default function Dashboard() {
                         <button
                           onClick={() => handleAttendanceChange("going")}
                           disabled={loadingAttendance}
-                          className={`py-4 px-6 border-4 border-black font-black uppercase tracking-tighter text-xl transition-all active:translate-y-1 active:shadow-none ${
+                          className={`py-4 px-6 border-4 font-black uppercase tracking-tighter text-xl transition-all active:translate-y-1 active:shadow-none ${
                             attendance?.status === "going"
-                              ? "bg-orange-600 text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                              : "bg-white hover:bg-orange-50 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
+                              ? "bg-green-600 text-white border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                              : "bg-white hover:bg-slate-50 border-orange-600 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
                           }`}
                         >
                           Going
@@ -197,10 +197,10 @@ export default function Dashboard() {
                         <button
                           onClick={() => handleAttendanceChange("maybe")}
                           disabled={loadingAttendance}
-                          className={`py-4 px-6 border-4 border-black font-black uppercase tracking-tighter text-xl transition-all active:translate-y-1 active:shadow-none ${
+                          className={`py-4 px-6 border-4 font-black uppercase tracking-tighter text-xl transition-all active:translate-y-1 active:shadow-orange-600 ${
                             attendance?.status === "maybe"
-                              ? "bg-slate-200 text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                              : "bg-white hover:bg-slate-50 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
+                              ? "bg-yellow-500 text-white border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                              : "bg-white hover:bg-slate-50 border-orange-600 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
                           }`}
                         >
                           Maybe
@@ -208,10 +208,10 @@ export default function Dashboard() {
                         <button
                           onClick={() => handleAttendanceChange("not_going")}
                           disabled={loadingAttendance}
-                          className={`py-4 px-6 border-4 border-black font-black uppercase tracking-tighter text-xl transition-all active:translate-y-1 active:shadow-none ${
+                          className={`py-4 px-6 border-4 font-black uppercase tracking-tighter text-xl transition-all active:translate-y-1 active:shadow-none ${
                             attendance?.status === "not_going"
-                              ? "bg-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                              : "bg-white hover:bg-slate-100 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
+                              ? "bg-red-600 text-white border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                              : "bg-white hover:bg-slate-100 border-orange-600 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
                           }`}
                         >
                           No

@@ -276,7 +276,7 @@ export default function Dashboard() {
                           .map((pref) => (
                             <span
                               key={pref.preferenceRank}
-                              className="px-3 py-1 bg-white text-black font-black border-2 border-black uppercase text-xs"
+                              className="px-3 py-1 bg-orange-600 text-white font-black border-2 border-black uppercase text-xs"
                             >
                               {pref.position}
                             </span>
@@ -288,7 +288,7 @@ export default function Dashboard() {
                   <button
                     onClick={() => navigate(`/teams/${currentTeam?.id}/profile`)}
                     disabled={!currentTeam}
-                    className="mt-6 w-full py-2 border-2 border-black font-black uppercase text-xs tracking-widest hover:bg-black hover:text-white transition-colors disabled:opacity-50"
+                    className="mt-6 w-full py-2 border-2 border-orange-600 font-black uppercase text-xs tracking-widest hover:bg-black hover:text-white transition-colors disabled:opacity-50"
                   >
                     Edit Preferences
                   </button>

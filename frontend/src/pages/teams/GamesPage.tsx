@@ -102,13 +102,13 @@ export function GamesPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "going":
-        return "bg-green-500 hover:bg-green-600";
+        return "bg-green-600";
       case "maybe":
-        return "bg-yellow-500 hover:bg-yellow-600";
+        return "bg-yellow-500";
       case "not_going":
-        return "bg-red-500 hover:bg-red-600";
+        return "bg-red-600";
       default:
-        return "bg-gray-500 hover:bg-gray-600";
+        return "bg-slate-500";
     }
   };
 
@@ -155,10 +155,10 @@ export function GamesPage() {
 
   return (
     <div className="container py-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Schedule</h1>
+      <div className="flex items-center justify-between border-b-4 border-black pb-4 mb-4">
+        <h1 className="text-4xl font-black uppercase tracking-tighter">Schedule</h1>
         {currentTeam?.membership?.isAdmin && (
-          <Button asChild>
+          <Button asChild variant="brutalist-orange">
             <Link to={`/teams/${teamId}/games/new`}>
               <Plus className="mr-2 h-4 w-4" />
               Add Game
@@ -171,7 +171,7 @@ export function GamesPage() {
         {/* Upcoming Games Section */}
         {upcomingGames && upcomingGames.length > 0 && (
           <>
-            <div className="text-lg font-semibold text-slate-700 mt-4">
+            <div className="text-xl font-black uppercase tracking-widest text-black mt-8 mb-2">
               Upcoming Games
             </div>
             {upcomingGames.map((game: any) => (
@@ -224,7 +224,7 @@ export function GamesPage() {
                             <Badge
                               className={`text-xs ${getStatusColor(
                                 att.status
-                              )} text-white border-0`}
+                              )} text-white`}
                             >
                               {att.teamMember?.user?.name || "Unknown"}
                             </Badge>
@@ -238,7 +238,7 @@ export function GamesPage() {
                             <Badge
                               className={`text-xs ${getStatusColor(
                                 att.status
-                              )} text-white border-0`}
+                              )} text-white`}
                             >
                               {att.teamMember?.user?.name || "Unknown"}
                             </Badge>
@@ -338,7 +338,7 @@ export function GamesPage() {
         {/* Past Games Section */}
         {pastGames && pastGames.length > 0 && (
           <>
-            <div className="text-lg font-semibold text-slate-500 mt-6">
+            <div className="text-xl font-black uppercase tracking-widest text-slate-500 mt-12 mb-2">
               Past Games
             </div>
             {pastGames.map((game: any) => (
@@ -391,7 +391,7 @@ export function GamesPage() {
                             <Badge
                               className={`text-xs ${getStatusColor(
                                 att.status
-                              )} text-white border-0`}
+                              )} text-white`}
                             >
                               {att.teamMember?.user?.name || "Unknown"}
                             </Badge>
@@ -405,7 +405,7 @@ export function GamesPage() {
                             <Badge
                               className={`text-xs ${getStatusColor(
                                 att.status
-                              )} text-white border-0`}
+                              )} text-white`}
                             >
                               {att.teamMember?.user?.name || "Unknown"}
                             </Badge>

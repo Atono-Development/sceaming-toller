@@ -45,11 +45,11 @@ export const CreateTeamPage: React.FC = () => {
 
   if (isSuccess) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
-        <Card className="w-full max-w-md shadow-lg border-slate-200">
+      <div className="flex items-center justify-center min-h-screen bg-white p-4">
+        <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-slate-900 text-center">Request Sent!</CardTitle>
-            <CardDescription className="text-slate-500 text-center text-lg mt-2">
+            <CardTitle className="text-3xl font-black uppercase tracking-tighter text-center">Request Sent!</CardTitle>
+            <CardDescription className="text-slate-500 text-center font-bold uppercase text-sm mt-2">
               Your request to create a new team has been submitted for review.
             </CardDescription>
           </CardHeader>
@@ -57,7 +57,7 @@ export const CreateTeamPage: React.FC = () => {
             An admin will review your request. You'll receive an email upon approval.
           </CardContent>
           <CardFooter>
-            <Button onClick={() => navigate('/')} className="w-full bg-orange-600 hover:bg-orange-700 text-white">
+            <Button onClick={() => navigate('/')} className="w-full" variant="brutalist-orange">
               Back to Dashboard
             </Button>
           </CardFooter>
@@ -67,18 +67,18 @@ export const CreateTeamPage: React.FC = () => {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
-      <Card className="w-full max-w-md shadow-lg border-slate-200">
+    <div className="flex items-center justify-center min-h-screen bg-white p-4">
+      <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-slate-900 text-center">Create a New Team</CardTitle>
-          <CardDescription className="text-slate-500 text-center">
+          <CardTitle className="text-3xl font-black uppercase tracking-tighter text-center">Create a New Team</CardTitle>
+          <CardDescription className="text-slate-500 text-center font-bold uppercase text-sm">
             Set up your slo-pitch team to start managing lineups and games.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-sm font-medium text-slate-700">Team Name</Label>
+              <Label htmlFor="name" className="text-xs font-black uppercase tracking-widest text-slate-700">Team Name</Label>
               <Input
                 id="name"
                 placeholder="e.g. The Screaming Tollers"
@@ -90,7 +90,7 @@ export const CreateTeamPage: React.FC = () => {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description" className="text-sm font-medium text-slate-700">Description (Optional)</Label>
+              <Label htmlFor="description" className="text-xs font-black uppercase tracking-widest text-slate-700">Description (Optional)</Label>
               <Input
                 id="description"
                 placeholder="e.g. Sunday night recreational league"
@@ -99,7 +99,7 @@ export const CreateTeamPage: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="league" className="text-sm font-medium text-slate-700">League</Label>
+              <Label htmlFor="league" className="text-xs font-black uppercase tracking-widest text-slate-700">League</Label>
               <Input
                 id="league"
                 placeholder="e.g. City Parks & Rec"
@@ -111,7 +111,7 @@ export const CreateTeamPage: React.FC = () => {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="season" className="text-sm font-medium text-slate-700">Season</Label>
+              <Label htmlFor="season" className="text-xs font-black uppercase tracking-widest text-slate-700">Season</Label>
               <Input
                 id="season"
                 placeholder="e.g. Summer 2024"
@@ -123,11 +123,11 @@ export const CreateTeamPage: React.FC = () => {
               )}
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-2 pt-4">
-            <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white" disabled={isSubmitting}>
+          <CardFooter className="flex flex-col space-y-4 pt-4">
+            <Button type="submit" className="w-full" variant="brutalist-orange" disabled={isSubmitting}>
               {isSubmitting ? 'Creating...' : 'Create Team'}
             </Button>
-            <Button variant="ghost" type="button" className="w-full text-slate-500 hover:text-slate-700" onClick={() => navigate('/')}>
+            <Button variant="ghost" type="button" className="w-full text-slate-500 font-bold uppercase text-xs" onClick={() => navigate('/')}>
               Cancel
             </Button>
           </CardFooter>

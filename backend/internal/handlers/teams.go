@@ -2,7 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -257,6 +262,115 @@ func GetTeam(w http.ResponseWriter, r *http.Request) {
 	var team models.Team
 	if result := database.DB.First(&team, teamID); result.Error != nil {
 		http.Error(w, "Team not found", http.StatusNotFound)
+		return
+	}
+
+	json.NewEncoder(w).Encode(team)
+}
+
+func UploadTeamLogo(w http.ResponseWriter, r *http.Request) {
+	teamIDStr := chi.URLParam(r, "teamID")
+	teamID, err := uuid.Parse(teamIDStr)
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+
+	// Limit to 5MB
+	r.Body = http.MaxBytesReader(w, r.Body, 5*1024*1024)
+	if err := r.ParseMultipartForm(5 * 1024 * 1024); err != nil {
+		http.Error(w, "File too large (max 5MB)", http.StatusBadRequest)
+		return
+	}
+
+	file, header, err := r.FormFile("logo")
+	if err != nil {
+		http.Error(w, "Failed to get file from form", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	// Validate file extension
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	allowedExts := map[string]bool{".png": true, ".jpg": true, ".jpeg": true, ".svg": true}
+	if !allowedExts[ext] {
+		http.Error(w, "Invalid file type. Only PNG, JPEG, and SVG are allowed.", http.StatusBadRequest)
+		return
+	}
+
+	// Create uploads directory if it doesn't exist
+	uploadDir := "./uploads/logos"
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		http.Error(w, "Failed to create upload directory", http.StatusInternalServerError)
+		return
+	}
+
+	// Generate unique filename
+	fileName := fmt.Sprintf("%s%s", uuid.New().String(), ext)
+	filePath := filepath.Join(uploadDir, fileName)
+
+	// Save file
+	dst, err := os.Create(filePath)
+	if err != nil {
+		http.Error(w, "Failed to save file", http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, file); err != nil {
+		http.Error(w, "Failed to save file content", http.StatusInternalServerError)
+		return
+	}
+
+	// Update team in DB
+	var team models.Team
+	if err := database.DB.First(&team, teamID).Error; err != nil {
+		http.Error(w, "Team not found", http.StatusNotFound)
+		return
+	}
+
+	// Delete old logo if it exists
+	if team.LogoURL != "" {
+		// handle both /api/uploads/ and /uploads/ prefixes
+		relPath := team.LogoURL
+		relPath = strings.TrimPrefix(relPath, "/api")
+		
+		oldFilePath := filepath.Join(".", relPath)
+		os.Remove(oldFilePath)
+	}
+
+	team.LogoURL = "/api/uploads/logos/" + fileName
+	if err := database.DB.Save(&team).Error; err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(team)
+}
+
+func DeleteTeamLogo(w http.ResponseWriter, r *http.Request) {
+	teamIDStr := chi.URLParam(r, "teamID")
+	teamID, err := uuid.Parse(teamIDStr)
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+
+	var team models.Team
+	if err := database.DB.First(&team, teamID).Error; err != nil {
+		http.Error(w, "Team not found", http.StatusNotFound)
+		return
+	}
+
+	if team.LogoURL != "" {
+		relPath := strings.TrimPrefix(team.LogoURL, "/api")
+		filePath := filepath.Join(".", relPath)
+		os.Remove(filePath)
+	}
+
+	team.LogoURL = ""
+	if err := database.DB.Save(&team).Error; err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

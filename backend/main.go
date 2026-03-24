@@ -15,6 +15,7 @@ import (
 	"github.com/liam/screaming-toller/backend/internal/database"
 	"github.com/liam/screaming-toller/backend/internal/handlers"
 	"github.com/liam/screaming-toller/backend/internal/middleware"
+	"path/filepath"
 )
 
 func main() {
@@ -127,9 +128,18 @@ func main() {
 				r.Get("/members/preferences", handlers.GetAllTeamMemberPreferences)
 				r.Put("/members/{memberID}/preferences", handlers.UpdateMemberPreferences)
 				r.Put("/members/{memberID}/pitcher", handlers.UpdateMemberPitcherStatus)
+
+				r.Post("/logo", handlers.UploadTeamLogo)
+				r.Delete("/logo", handlers.DeleteTeamLogo)
 			})
 		})
 	})
+
+	// Serve Static Files (Logos)
+	workDir, _ := os.Getwd()
+	filesDir := http.Dir(filepath.Join(workDir, "uploads"))
+	r.Handle("/api/uploads/*", http.StripPrefix("/api/uploads/", http.FileServer(filesDir)))
+	r.Handle("/uploads/*", http.StripPrefix("/uploads/", http.FileServer(filesDir)))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

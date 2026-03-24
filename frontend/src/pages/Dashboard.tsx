@@ -154,11 +154,19 @@ export default function Dashboard() {
                 </div>
                 <div className="p-6 md:p-8 lg:p-10 flex flex-col lg:flex-row gap-8 items-center lg:items-stretch">
                   {/* Logo Placeholder */}
-                  <div className="w-32 h-32 md:w-48 md:h-48 border-4 border-orange-600 flex items-center justify-center p-4 flex-shrink-0 bg-white">
-                    <div className="text-center">
-                      <div className="text-4xl md:text-6xl mb-2">🥎</div>
-                      <div className="text-xs font-black uppercase leading-tight">Team Logo</div>
-                    </div>
+                  <div className="w-32 h-32 md:w-48 md:h-48 border-4 border-orange-600 flex items-center justify-center p-4 flex-shrink-0 bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                    {currentTeam?.logoUrl ? (
+                      <img 
+                        src={currentTeam.logoUrl} 
+                        alt={`${currentTeam.name} logo`}
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    ) : (
+                      <div className="text-center">
+                        <div className="text-4xl md:text-6xl mb-2">🥎</div>
+                        <div className="text-xs font-black uppercase leading-tight">Team Logo</div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex-grow flex flex-col justify-between space-y-6 text-center lg:text-left">

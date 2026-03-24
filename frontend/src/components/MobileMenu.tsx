@@ -51,17 +51,17 @@ export function MobileMenu() {
         </SheetHeader>
         <div className="flex flex-col space-y-4 mt-6">
           {user && (
-            <div className="pb-4 border-b border-slate-200">
-              <p className="text-sm text-slate-500">Welcome,</p>
-              <p className="font-medium text-slate-900">{user.name}</p>
+            <div className="pb-4 border-b-4 border-black">
+              <p className="text-xs font-black uppercase tracking-widest text-slate-500">Welcome,</p>
+              <p className="text-xl font-black text-black uppercase">{user.name}</p>
             </div>
           )}
 
           {user?.isSuperAdmin && (
             <nav className="flex flex-col space-y-2 mt-2">
               <Button
-                variant="ghost"
-                className="justify-start h-12 text-base text-orange-600 font-semibold"
+                variant="default"
+                className="justify-start h-14 text-lg"
                 onClick={() => handleNavigation('/admin/teams')}
               >
                 Admin Dashboard
@@ -102,10 +102,13 @@ export function MobileMenu() {
             </nav>
           )}
 
-          <div className="pt-4 border-t border-slate-200 space-y-3">
-            <TeamSelector />
+          <div className="pt-4 border-t-4 border-black space-y-4">
+            <div className="p-1 px-0">
+               <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-2">Switch Team</p>
+               <TeamSelector />
+            </div>
             <Button
-              variant="outline"
+              variant="brutalist"
               className="w-full h-12 text-base"
               onClick={handleLogout}
             >

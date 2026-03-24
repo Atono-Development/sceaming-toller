@@ -186,7 +186,7 @@ export function RosterPage() {
                   <TableCell>
                     <Badge
                       variant={member.gender === "M" ? "default" : "secondary"}
-                      className="text-xs"
+                      size="sm"
                     >
                       {member.gender === "M"
                         ? "M"
@@ -199,7 +199,7 @@ export function RosterPage() {
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {member.isAdmin && (
-                        <Badge variant="default" className="text-xs">
+                        <Badge variant="default" size="sm">
                           Admin
                         </Badge>
                       )}
@@ -211,7 +211,8 @@ export function RosterPage() {
                           <Badge
                             key={index}
                             variant="secondary"
-                            className="text-xs capitalize"
+                            size="sm"
+                            className="capitalize"
                           >
                             {role}
                           </Badge>
@@ -232,7 +233,7 @@ export function RosterPage() {
                                     ? "default"
                                     : "outline"
                                 }
-                                className="text-xs"
+                                size="sm"
                               >
                                 {pref.position} ({pref.preferenceRank})
                               </Badge>

@@ -150,7 +150,7 @@ export default function Dashboard() {
               <section className="border-4 border-orange-600 p-0 overflow-hidden bg-white shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
                 <div className="bg-black text-white p-3 px-6 flex justify-between items-center">
                   <h2 className="text-xl font-black uppercase tracking-tight">Next Game</h2>
-                  <span className="font-bold uppercase text-sm tracking-widest">Upcoming</span>
+                  <span className="font-bold uppercase text-sm tracking-widest">{upcomingGames[0].location}</span>
                 </div>
                 <div className="p-6 md:p-8 lg:p-10 flex flex-col lg:flex-row gap-8 items-center lg:items-stretch">
                   {/* Logo Placeholder */}
@@ -296,7 +296,10 @@ export default function Dashboard() {
               </div>
 
               {/* Schedule Card */}
-              <div className="border-4 border-black p-0 bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+              <div 
+                onClick={() => navigate(`/teams/${currentTeam?.id}/games`)}
+                className="border-4 border-black p-0 bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-all hover:-translate-y-1 hover:text-white hover:bg-orange-600 hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]"
+              >
                 <div className="bg-black text-white p-2 px-4 uppercase font-black text-sm tracking-widest">
                   Upcoming Schedule
                 </div>
@@ -305,9 +308,9 @@ export default function Dashboard() {
                     <div className="space-y-4">
                       {upcomingGames.slice(1, 4).map((game: Game) => (
                         <div key={game.id} className="pb-3 border-b-2 border-slate-100 last:border-0 last:pb-0">
-                          <p className="font-black uppercase text-sm leading-tight">Vs {game.opposingTeam}</p>
+                          <p className="font-black uppercase text-sm leading-tight">Vs {game.opposingTeam} @ {game.location}</p>
                           <p className="text-xs font-bold text-slate-500 uppercase">
-                            {utcToLocalDate(game.date).toLocaleDateString()} @ {game.time}
+                            {utcToLocalDate(game.date).toLocaleDateString()}
                           </p>
                         </div>
                       ))}

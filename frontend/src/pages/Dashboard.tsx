@@ -175,13 +175,6 @@ export default function Dashboard() {
               ) : (
                 <p className="text-slate-500 italic">No teams joined yet.</p>
               )}
-              <Button
-                className="mt-4 w-full"
-                variant="outline"
-                onClick={() => navigate("/teams/create")}
-              >
-                Create New Team
-              </Button>
             </CardContent>
           </Card>
 

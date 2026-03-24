@@ -1,8 +1,10 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTeamContext } from '../contexts/TeamContext';
 
 export const TeamSelector: React.FC = () => {
   const { teams, currentTeam, setCurrentTeam, isLoading } = useTeamContext();
+  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -10,15 +12,15 @@ export const TeamSelector: React.FC = () => {
     );
   }
 
-  if (teams.length === 0) {
-    return null;
-  }
-
   return (
-    <div className="relative inline-block w-64">
+    <div className="relative inline-block w-full">
       <select
         value={currentTeam?.id || ''}
         onChange={(e) => {
+          if (e.target.value === 'create') {
+            navigate('/teams/create');
+            return;
+          }
           const team = teams.find((t) => t.id === e.target.value);
           setCurrentTeam(team || null);
         }}
@@ -30,11 +32,18 @@ export const TeamSelector: React.FC = () => {
           backgroundSize: '1.5em 1.5em',
         }}
       >
+        <option value="" disabled>
+          {teams.length === 0 ? 'No teams joined' : 'Select a team'}
+        </option>
         {teams.map((team) => (
           <option key={team.id} value={team.id}>
             {team.name} {team.isActive ? '' : '(Inactive)'}
           </option>
         ))}
+        <hr className="my-1" />
+        <option value="create" className="font-semibold text-indigo-600">
+          + Create New Team
+        </option>
       </select>
     </div>
   );

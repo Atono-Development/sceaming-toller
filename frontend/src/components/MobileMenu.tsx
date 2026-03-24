@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useTeamContext } from "../contexts/TeamContext";
@@ -17,11 +17,15 @@ export function MobileMenu() {
   const { user, logout } = useAuth();
   const { currentTeam } = useTeamContext();
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
 
   const handleNavigation = (path: string) => {
     navigate(path);
-    setOpen(false);
   };
 
   const handleLogout = () => {
@@ -35,7 +39,7 @@ export function MobileMenu() {
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden"
+          className=""
           aria-label="Open menu"
         >
           <Menu className="h-6 w-6" />
@@ -57,7 +61,7 @@ export function MobileMenu() {
             <nav className="flex flex-col space-y-2 mt-2">
               <Button
                 variant="ghost"
-                className="justify-start h-12 text-base text-indigo-600 font-semibold"
+                className="justify-start h-12 text-base text-orange-600 font-semibold"
                 onClick={() => handleNavigation('/admin/teams')}
               >
                 Admin Dashboard

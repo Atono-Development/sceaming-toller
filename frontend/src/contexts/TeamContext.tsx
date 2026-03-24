@@ -8,6 +8,7 @@ export interface Team {
   description: string;
   league: string;
   season: string;
+  logoUrl?: string;
   isActive: boolean;
   status: "active" | "pending" | "rejected";
   membership?: {

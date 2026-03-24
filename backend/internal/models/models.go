@@ -25,15 +25,16 @@ func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
 }
 
 type Team struct {
-	ID          uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	League      string    `json:"league"`
-	Season      string    `json:"season"`
-	Status      string    `gorm:"default:'pending'" json:"status"` // "pending", "active", "rejected"
-	IsActive    bool      `gorm:"default:true" json:"isActive"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID          uuid.UUID   `gorm:"type:uuid;primaryKey" json:"id"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	LogoURL     string      `json:"logoUrl"`
+	League      string      `json:"league"`
+	Season      string      `json:"season"`
+	Status      string      `gorm:"default:'pending'" json:"status"` // "pending", "active", "rejected"
+	IsActive    bool        `gorm:"default:true" json:"isActive"`
+	CreatedAt   time.Time   `json:"createdAt"`
+	UpdatedAt   time.Time   `json:"updatedAt"`
 	Membership  *TeamMember `gorm:"-" json:"membership,omitempty"`
 }
 

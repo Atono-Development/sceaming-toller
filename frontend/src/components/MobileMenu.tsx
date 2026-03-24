@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useTeamContext } from "../contexts/TeamContext";
@@ -17,11 +17,15 @@ export function MobileMenu() {
   const { user, logout } = useAuth();
   const { currentTeam } = useTeamContext();
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
 
   const handleNavigation = (path: string) => {
     navigate(path);
-    setOpen(false);
   };
 
   const handleLogout = () => {

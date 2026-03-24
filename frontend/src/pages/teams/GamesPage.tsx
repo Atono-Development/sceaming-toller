@@ -222,7 +222,8 @@ export function GamesPage() {
                             className="inline-flex items-center gap-1 mr-2 mb-1"
                           >
                             <Badge
-                              className={`text-xs ${getStatusColor(
+                              size="sm"
+                              className={`${getStatusColor(
                                 att.status
                               )} text-white`}
                             >
@@ -236,7 +237,8 @@ export function GamesPage() {
                             className="inline-flex items-center gap-1 mr-2 mb-1"
                           >
                             <Badge
-                              className={`text-xs ${getStatusColor(
+                              size="sm"
+                              className={`${getStatusColor(
                                 att.status
                               )} text-white`}
                             >
@@ -389,7 +391,8 @@ export function GamesPage() {
                             className="inline-flex items-center gap-1 mr-2 mb-1"
                           >
                             <Badge
-                              className={`text-xs ${getStatusColor(
+                              size="sm"
+                              className={`${getStatusColor(
                                 att.status
                               )} text-white`}
                             >
@@ -403,7 +406,8 @@ export function GamesPage() {
                             className="inline-flex items-center gap-1 mr-2 mb-1"
                           >
                             <Badge
-                              className={`text-xs ${getStatusColor(
+                              size="sm"
+                              className={`${getStatusColor(
                                 att.status
                               )} text-white`}
                             >

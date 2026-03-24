@@ -12,7 +12,7 @@ export default function Layout() {
               <MobileMenu />
               <Link
                 to="/"
-                className="text-2xl font-black text-black hover:text-orange-600 transition-colors uppercase tracking-tighter"
+                className="text-2xl font-black text-orange-600 hover:underline hover:underline-offset-4 transition-colors uppercase tracking-tighter"
               >
                 Toller Ball
               </Link>

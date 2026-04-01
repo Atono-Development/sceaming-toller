@@ -9,7 +9,9 @@ import {
   updateAttendance,
   type Attendance,
 } from "../../api/games";
+import { getMyTeamMemberInfo } from "../../api/members";
 import { Button } from "../../components/ui/button";
+import { useToast } from "../../hooks/use-toast";
 import {
   Card,
   CardContent,
@@ -36,6 +38,8 @@ export function GamesPage() {
   const [expandedGames, setExpandedGames] = useState<Record<string, boolean>>(
     {}
   );
+  const [gender, setGender] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const deleteGameMutation = useMutation({
     mutationFn: (gameId: string) => deleteGame(teamId!, gameId),
@@ -73,6 +77,14 @@ export function GamesPage() {
   };
 
   const handleAttendanceChange = async (gameId: string, status: string) => {
+    if (!gender && gender !== null) {
+      toast({
+        title: "Gender Required",
+        description: "Please set your gender in your profile before confirming attendance. This is required for creating balanced lineups.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       await updateAttendance(teamId!, gameId, status);
       setAttendanceStates((prev) => ({
@@ -111,14 +123,25 @@ export function GamesPage() {
         return "bg-slate-500";
     }
   };
-
-
-
   const handleDeleteGame = async (gameId: string) => {
     if (window.confirm("Are you sure you want to delete this game?")) {
       deleteGameMutation.mutate(gameId);
     }
   };
+
+  useEffect(() => {
+    const fetchMemberInfo = async () => {
+      if (teamId && user) {
+        try {
+          const memberInfo = await getMyTeamMemberInfo(teamId);
+          setGender(memberInfo.gender || "");
+        } catch (error) {
+          console.error("Failed to fetch member info:", error);
+        }
+      }
+    };
+    fetchMemberInfo();
+  }, [teamId, user]);
 
   useEffect(() => {
     if (games) {

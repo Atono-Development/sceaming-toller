@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { getTeamGames } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import { useTeamContext } from "../contexts/TeamContext";
+import { useToast } from "../hooks/use-toast";
 import {
   getMyPreferences,
   getMyTeamMemberInfo,
@@ -27,9 +28,12 @@ export default function Dashboard() {
   const [upcomingGames, setUpcomingGames] = useState<Game[]>([]);
   const [preferences, setPreferences] = useState<TeamMemberPreference[]>([]);
   const [isPitcher, setIsPitcher] = useState(false);
+  const [gender, setGender] = useState<string | null>(null);
   const [loadingPreferences, setLoadingPreferences] = useState(false);
   const [attendance, setAttendance] = useState<Attendance | null>(null);
+  const [allAttendance, setAllAttendance] = useState<Attendance[]>([]);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (currentTeam?.id) {
@@ -39,9 +43,8 @@ export default function Dashboard() {
           const nextWeek = new Date(now);
           nextWeek.setDate(now.getDate() + 7);
 
-          const filtered = games.filter((g: Game) => {
+          let filtered = games.filter((g: Game) => {
             const gameDate = utcToLocalDate(g.date);
-
             return (
               gameDate >= now &&
               gameDate <= nextWeek &&
@@ -49,6 +52,22 @@ export default function Dashboard() {
               g.status !== "cancelled"
             );
           });
+
+          // Fallback to following weeks if nothing in the next 7 days
+          if (filtered.length === 0) {
+            const nextFollowWindow = new Date(now);
+            nextFollowWindow.setDate(now.getDate() + 20);
+
+            filtered = games.filter((g: Game) => {
+              const gameDate = utcToLocalDate(g.date);
+              return (
+                gameDate >= now &&
+                gameDate <= nextFollowWindow &&
+                g.status !== "completed" &&
+                g.status !== "cancelled"
+              );
+            });
+          }
           setUpcomingGames(filtered);
         })
         .catch((err: unknown) => console.error("Failed to fetch games:", err));
@@ -66,6 +85,7 @@ export default function Dashboard() {
           ]);
           setPreferences(preferencesData);
           setIsPitcher(memberInfo.role.includes("pitcher"));
+          setGender(memberInfo.gender || "");
         } catch (err: unknown) {
           console.error("Failed to fetch preferences:", err);
         } finally {
@@ -76,48 +96,60 @@ export default function Dashboard() {
     }
   }, [currentTeam]);
 
-  useEffect(() => {
+  const loadAttendance = async () => {
     if (currentTeam?.id && upcomingGames.length > 0) {
-      const loadAttendance = async () => {
-        const nextGame = upcomingGames[0];
-        setLoadingAttendance(true);
-        try {
-          const attendanceData = await getAttendance(
-            currentTeam.id,
-            nextGame.id
-          );
-          const myAttendance = attendanceData.find(
-            (att: any) => user?.id && att.teamMember?.user?.id === user.id
-          );
-          setAttendance(myAttendance || null);
-        } catch (err: unknown) {
-          console.error("Failed to fetch attendance:", err);
-        } finally {
-          setLoadingAttendance(false);
-        }
-      };
-      loadAttendance();
+      const nextGame = upcomingGames[0];
+      setLoadingAttendance(true);
+      try {
+        const attendanceData = await getAttendance(
+          currentTeam.id,
+          nextGame.id
+        );
+        setAllAttendance(attendanceData);
+        const myAttendance = attendanceData.find(
+          (att: any) => user?.id && att.teamMember?.user?.id === user.id
+        );
+        setAttendance(myAttendance || null);
+      } catch (err: unknown) {
+        console.error("Failed to fetch attendance:", err);
+      } finally {
+        setLoadingAttendance(false);
+      }
     }
+  };
+
+  useEffect(() => {
+    loadAttendance();
   }, [currentTeam, upcomingGames, user?.id]);
 
   const handleAttendanceChange = (status: string) => {
+    if (!gender && gender !== null) {
+      toast({
+        title: "Gender Required",
+        description: "Please set your gender in your profile before confirming attendance. This is required for creating balanced lineups.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (currentTeam?.id && upcomingGames.length > 0) {
       const nextGame = upcomingGames[0];
       updateAttendance(currentTeam.id, nextGame.id, status)
         .then(() => {
-          setAttendance({
-            id: "",
-            teamMemberId: "",
-            gameId: nextGame.id,
-            status,
-            updatedAt: new Date().toISOString(),
-          });
+          loadAttendance();
         })
         .catch((err: unknown) =>
           console.error("Failed to update attendance:", err)
         );
     }
   };
+
+  const maleGoingCount = allAttendance.filter(
+    (a) => a.status === "going" && a.teamMember?.gender === "M"
+  ).length;
+  const femaleGoingCount = allAttendance.filter(
+    (a) => a.status === "going" && a.teamMember?.gender === "F"
+  ).length;
 
   return (
     <div className="min-h-screen bg-white p-4 md:p-8 font-sans text-black">
@@ -189,7 +221,19 @@ export default function Dashboard() {
                     </div>
 
                     <div className="space-y-4">
-                      <p className="font-black uppercase text-sm tracking-widest">Confirm your attendance:</p>
+                      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <p className="font-black uppercase text-sm tracking-widest text-center lg:text-left">Confirm your attendance:</p>
+                        <div className="flex gap-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-blue-500 rounded-full border border-black"></div>
+                            <span className="text-sm font-bold uppercase tracking-tight">M: {maleGoingCount}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-pink-500 rounded-full border border-black"></div>
+                            <span className="text-sm font-bold uppercase tracking-tight">F: {femaleGoingCount}</span>
+                          </div>
+                        </div>
+                      </div>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <button
                           onClick={() => handleAttendanceChange("going")}

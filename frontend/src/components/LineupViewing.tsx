@@ -85,12 +85,25 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
   const generateAllInnings = async () => {
     try {
       setLoading(true);
+
+      // If no batting order exists, generate one first
+      let battingOrderGenerated = false;
+      if (battingOrder.length === 0) {
+        console.log("No batting order found, generating one automatically...");
+        await generateBattingOrder(teamId, game.id);
+        battingOrderGenerated = true;
+      }
+
       await generateCompleteFieldingLineup(teamId, game.id);
       await loadLineups();
+
+      const mainSuccessMessage = "Generated complete 7-inning fielding lineup with balanced playing time";
+
       toast({
-        title: "Success",
-        description:
-          "Generated complete 7-inning fielding lineup with balanced playing time",
+        title: battingOrderGenerated ? "Lineups Generated" : "Success",
+        description: battingOrderGenerated
+          ? `${mainSuccessMessage} and a new batting order.`
+          : mainSuccessMessage,
       });
     } catch {
       toast({

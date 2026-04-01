@@ -316,6 +316,15 @@ const LineupPage: React.FC = () => {
 
     try {
       setLoading(true);
+
+      // If no batting order exists, generate one first
+      let battingOrderGenerated = false;
+      if (battingOrder.length === 0) {
+        console.log("No batting order found, generating one automatically...");
+        await generateBattingOrder(teamId!, selectedGame.id);
+        battingOrderGenerated = true;
+      }
+
       await generateWithRetry();
 
       // Load the fresh lineup data
@@ -428,12 +437,15 @@ const LineupPage: React.FC = () => {
         });
       }
 
+      const mainSuccessMessage = retryCount > 0
+        ? `Generated complete 7-inning fielding lineup with balanced playing time (succeeded after ${retryCount} retries)`
+        : "Generated complete 7-inning fielding lineup with balanced playing time";
+
       toast({
-        title: "Success",
-        description:
-          retryCount > 0
-            ? `Generated complete 7-inning fielding lineup with balanced playing time (succeeded after ${retryCount} retries)`
-            : "Generated complete 7-inning fielding lineup with balanced playing time",
+        title: battingOrderGenerated ? "Lineups Generated" : "Success",
+        description: battingOrderGenerated
+          ? `${mainSuccessMessage} and a new batting order.`
+          : mainSuccessMessage,
       });
     } catch (error) {
       console.error("Error generating lineup:", error);

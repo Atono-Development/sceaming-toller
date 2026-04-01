@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { getTeamGames } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import { useTeamContext } from "../contexts/TeamContext";
+import { useToast } from "../hooks/use-toast";
 import {
   getMyPreferences,
   getMyTeamMemberInfo,
@@ -27,10 +28,12 @@ export default function Dashboard() {
   const [upcomingGames, setUpcomingGames] = useState<Game[]>([]);
   const [preferences, setPreferences] = useState<TeamMemberPreference[]>([]);
   const [isPitcher, setIsPitcher] = useState(false);
+  const [gender, setGender] = useState<string | null>(null);
   const [loadingPreferences, setLoadingPreferences] = useState(false);
   const [attendance, setAttendance] = useState<Attendance | null>(null);
   const [allAttendance, setAllAttendance] = useState<Attendance[]>([]);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (currentTeam?.id) {
@@ -82,6 +85,7 @@ export default function Dashboard() {
           ]);
           setPreferences(preferencesData);
           setIsPitcher(memberInfo.role.includes("pitcher"));
+          setGender(memberInfo.gender || "");
         } catch (err: unknown) {
           console.error("Failed to fetch preferences:", err);
         } finally {
@@ -119,6 +123,15 @@ export default function Dashboard() {
   }, [currentTeam, upcomingGames, user?.id]);
 
   const handleAttendanceChange = (status: string) => {
+    if (!gender && gender !== null) {
+      toast({
+        title: "Gender Required",
+        description: "Please set your gender in your profile before confirming attendance. This is required for creating balanced lineups.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (currentTeam?.id && upcomingGames.length > 0) {
       const nextGame = upcomingGames[0];
       updateAttendance(currentTeam.id, nextGame.id, status)

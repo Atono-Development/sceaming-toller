@@ -9,6 +9,7 @@ import {
 } from "./ui/select";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import { getMyTeamMemberInfo } from "../api/members";
 import {
   getAttendance,
   updateAttendance,
@@ -34,6 +35,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
   const [myAttendance, setMyAttendance] = useState<string>("not_going");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [gender, setGender] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
   const { currentTeam } = useTeamContext();
@@ -65,7 +67,29 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
     }
   };
 
+  useEffect(() => {
+    const fetchMemberInfo = async () => {
+      if (teamId && user) {
+        try {
+          const memberInfo = await getMyTeamMemberInfo(teamId);
+          setGender(memberInfo.gender || "");
+        } catch (error) {
+          console.error("Failed to fetch member info:", error);
+        }
+      }
+    };
+    fetchMemberInfo();
+  }, [teamId, user]);
+
   const handleAttendanceChange = async (status: string) => {
+    if (!gender && gender !== null) {
+      toast({
+        title: "Gender Required",
+        description: "Please set your gender in your profile before confirming attendance. This is required for creating balanced lineups.",
+        variant: "destructive",
+      });
+      return;
+    }
     setSaving(true);
     try {
       await updateAttendance(teamId, game.id, status);

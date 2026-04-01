@@ -23,6 +23,7 @@ export interface Attendance {
   updatedAt: string;
   teamMember?: {
     id: string;
+    gender: string;
     user?: {
       name: string;
       email: string;

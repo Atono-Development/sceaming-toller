@@ -29,6 +29,7 @@ export default function Dashboard() {
   const [isPitcher, setIsPitcher] = useState(false);
   const [loadingPreferences, setLoadingPreferences] = useState(false);
   const [attendance, setAttendance] = useState<Attendance | null>(null);
+  const [allAttendance, setAllAttendance] = useState<Attendance[]>([]);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   useEffect(() => {
@@ -91,28 +92,30 @@ export default function Dashboard() {
     }
   }, [currentTeam]);
 
-  useEffect(() => {
+  const loadAttendance = async () => {
     if (currentTeam?.id && upcomingGames.length > 0) {
-      const loadAttendance = async () => {
-        const nextGame = upcomingGames[0];
-        setLoadingAttendance(true);
-        try {
-          const attendanceData = await getAttendance(
-            currentTeam.id,
-            nextGame.id
-          );
-          const myAttendance = attendanceData.find(
-            (att: any) => user?.id && att.teamMember?.user?.id === user.id
-          );
-          setAttendance(myAttendance || null);
-        } catch (err: unknown) {
-          console.error("Failed to fetch attendance:", err);
-        } finally {
-          setLoadingAttendance(false);
-        }
-      };
-      loadAttendance();
+      const nextGame = upcomingGames[0];
+      setLoadingAttendance(true);
+      try {
+        const attendanceData = await getAttendance(
+          currentTeam.id,
+          nextGame.id
+        );
+        setAllAttendance(attendanceData);
+        const myAttendance = attendanceData.find(
+          (att: any) => user?.id && att.teamMember?.user?.id === user.id
+        );
+        setAttendance(myAttendance || null);
+      } catch (err: unknown) {
+        console.error("Failed to fetch attendance:", err);
+      } finally {
+        setLoadingAttendance(false);
+      }
     }
+  };
+
+  useEffect(() => {
+    loadAttendance();
   }, [currentTeam, upcomingGames, user?.id]);
 
   const handleAttendanceChange = (status: string) => {
@@ -120,19 +123,20 @@ export default function Dashboard() {
       const nextGame = upcomingGames[0];
       updateAttendance(currentTeam.id, nextGame.id, status)
         .then(() => {
-          setAttendance({
-            id: "",
-            teamMemberId: "",
-            gameId: nextGame.id,
-            status,
-            updatedAt: new Date().toISOString(),
-          });
+          loadAttendance();
         })
         .catch((err: unknown) =>
           console.error("Failed to update attendance:", err)
         );
     }
   };
+
+  const maleGoingCount = allAttendance.filter(
+    (a) => a.status === "going" && a.teamMember?.gender === "M"
+  ).length;
+  const femaleGoingCount = allAttendance.filter(
+    (a) => a.status === "going" && a.teamMember?.gender === "F"
+  ).length;
 
   return (
     <div className="min-h-screen bg-white p-4 md:p-8 font-sans text-black">
@@ -204,7 +208,19 @@ export default function Dashboard() {
                     </div>
 
                     <div className="space-y-4">
-                      <p className="font-black uppercase text-sm tracking-widest">Confirm your attendance:</p>
+                      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <p className="font-black uppercase text-sm tracking-widest text-center lg:text-left">Confirm your attendance:</p>
+                        <div className="flex gap-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-blue-500 rounded-full border border-black"></div>
+                            <span className="text-sm font-bold uppercase tracking-tight">M: {maleGoingCount}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-pink-500 rounded-full border border-black"></div>
+                            <span className="text-sm font-bold uppercase tracking-tight">F: {femaleGoingCount}</span>
+                          </div>
+                        </div>
+                      </div>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <button
                           onClick={() => handleAttendanceChange("going")}

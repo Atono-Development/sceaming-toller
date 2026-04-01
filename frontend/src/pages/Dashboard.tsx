@@ -39,9 +39,8 @@ export default function Dashboard() {
           const nextWeek = new Date(now);
           nextWeek.setDate(now.getDate() + 7);
 
-          const filtered = games.filter((g: Game) => {
+          let filtered = games.filter((g: Game) => {
             const gameDate = utcToLocalDate(g.date);
-
             return (
               gameDate >= now &&
               gameDate <= nextWeek &&
@@ -49,6 +48,22 @@ export default function Dashboard() {
               g.status !== "cancelled"
             );
           });
+
+          // Fallback to following weeks if nothing in the next 7 days
+          if (filtered.length === 0) {
+            const nextFollowWindow = new Date(now);
+            nextFollowWindow.setDate(now.getDate() + 20);
+
+            filtered = games.filter((g: Game) => {
+              const gameDate = utcToLocalDate(g.date);
+              return (
+                gameDate >= now &&
+                gameDate <= nextFollowWindow &&
+                g.status !== "completed" &&
+                g.status !== "cancelled"
+              );
+            });
+          }
           setUpcomingGames(filtered);
         })
         .catch((err: unknown) => console.error("Failed to fetch games:", err));

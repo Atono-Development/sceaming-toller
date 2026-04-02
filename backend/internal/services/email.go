@@ -124,6 +124,26 @@ func (s *EmailService) SendTeamRejectedEmail(toEmail, teamName string) error {
 	return err
 }
 
+// SendAttendanceReminderEmail sends a reminder to a user marked as 'maybe' for an upcoming game
+func (s *EmailService) SendAttendanceReminderEmail(toEmail, teamName, opponent, gameDate, gameTime, location, teamID string) error {
+	attendanceURL := fmt.Sprintf("%s/teams/%s/games", s.appURL, teamID) // Corrected to use teamID
+	subject := fmt.Sprintf("Game tomorrow vs %s", opponent)
+
+	htmlContent := s.buildReminderHTML(teamName, opponent, gameDate, gameTime, location, attendanceURL)
+	textContent := s.buildReminderText(teamName, opponent, gameDate, gameTime, location, attendanceURL)
+
+	params := &resend.SendEmailRequest{
+		From:    s.fromEmail,
+		To:      []string{toEmail},
+		Subject: subject,
+		Html:    htmlContent,
+		Text:    textContent,
+	}
+
+	_, err := s.client.Emails.Send(params)
+	return err
+}
+
 // buildInvitationHTML creates the HTML email template
 func (s *EmailService) buildInvitationHTML(teamName, inviterName, invitationURL string) string {
 	return fmt.Sprintf(`
@@ -209,4 +229,39 @@ Click the link below to accept the invitation and join the team. This invitation
 
 If you didn't expect this invitation, you can safely ignore this email.
 `, inviterName, teamName, invitationURL)
+}
+
+func (s *EmailService) buildReminderHTML(teamName, opponent, gameDate, gameTime, location, attendanceURL string) string {
+	return fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<body style="font-family: sans-serif; padding: 20px;">
+    <h2>Game Tomorrow! ⚾</h2>
+    <p>This is a reminder that you have not currently responded or are marked as <strong>'Maybe'</strong> for tomorrow's <strong>%s</strong> game.</p>
+    <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <p><strong>Opponent:</strong> %s</p>
+        <p><strong>Date:</strong> %s</p>
+        <p><strong>Time:</strong> %s</p>
+        <p><strong>Location:</strong> %s</p>
+    </div>
+    <p>Please update your attendance status so your team can plan the lineup.</p>
+    <a href="%s" style="display: inline-block; padding: 10px 20px; background: rgba(247, 82, 31, 1); color: white; text-decoration: none; border-radius: 5px;">Update Attendance</a>
+</body>
+</html>
+`, teamName, opponent, gameDate, gameTime, location, attendanceURL)
+}
+
+func (s *EmailService) buildReminderText(teamName, opponent, gameDate, gameTime, location, attendanceURL string) string {
+	return fmt.Sprintf(`
+Game Tomorrow!
+
+This is a reminder that you have not currently responded or are marked as 'Maybe' for tomorrow's %s game.
+
+Opponent: %s
+Date: %s
+Time: %s
+Location: %s
+
+Please update your attendance status here: %s
+`, teamName, opponent, gameDate, gameTime, location, attendanceURL)
 }

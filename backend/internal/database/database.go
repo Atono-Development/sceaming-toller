@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -50,6 +51,9 @@ func InitDB() {
 	
 	// Custom data migration for Auth0
 	migrateAuth0(DB)
+
+	// Ensure game constraints are cascading
+	fixGameConstraints(DB)
 }
 
 func migrateRoles(db *gorm.DB) {
@@ -94,6 +98,38 @@ func migrateAuth0(db *gorm.DB) {
 			log.Printf("Failed to drop password_hash column: %v", err)
 		} else {
 			log.Println("Successfully dropped password_hash column.")
+		}
+	}
+}
+
+func fixGameConstraints(db *gorm.DB) {
+	log.Println("Checking for game foreign key constraints to ensure CASCADE...")
+
+	// Table and constraint mapping
+	constraints := map[string][]string{
+		"attendances":      {"fk_attendances_game"},
+		"batting_orders":   {"fk_batting_orders_game"},
+		"fielding_lineups": {"fk_fielding_lineups_game"},
+		"inning_scores":    {"fk_inning_scores_game"},
+	}
+
+	for table, names := range constraints {
+		for _, name := range names {
+			// In PostgreSQL, we can use DROP CONSTRAINT IF EXISTS
+			// and then ADD CONSTRAINT with ON DELETE CASCADE.
+			err := db.Exec(fmt.Sprintf(`
+				ALTER TABLE %s 
+				DROP CONSTRAINT IF EXISTS %s,
+				ADD CONSTRAINT %s 
+				FOREIGN KEY (game_id) REFERENCES games(id) 
+				ON DELETE CASCADE;
+			`, table, name, name)).Error
+
+			if err != nil {
+				log.Printf("Warning: Failed to fix constraint %s on table %s: %v", name, table, err)
+			} else {
+				log.Printf("Fixed constraint %s on table %s (ON DELETE CASCADE)", name, table)
+			}
 		}
 	}
 }

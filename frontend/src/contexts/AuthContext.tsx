@@ -7,6 +7,7 @@ export interface User {
   name: string;
   email: string;
   isSuperAdmin: boolean;
+  optOutReminders: boolean;
   auth0Id?: string;
 }
 

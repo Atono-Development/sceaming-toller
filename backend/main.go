@@ -15,6 +15,7 @@ import (
 	"github.com/liam/screaming-toller/backend/internal/database"
 	"github.com/liam/screaming-toller/backend/internal/handlers"
 	"github.com/liam/screaming-toller/backend/internal/middleware"
+	"github.com/liam/screaming-toller/backend/internal/services"
 	"path/filepath"
 )
 
@@ -33,6 +34,20 @@ func main() {
 
 	// Initialize Auth0 JWKS Validator
 	auth.InitAuth0()
+
+	// Initialize Email and Reminder Services
+	emailService, err := services.NewEmailService()
+	if err != nil {
+		log.Printf("Warning: Email service not initialized: %v", err)
+	} else {
+		reminderService, err := services.NewReminderService(emailService)
+		if err != nil {
+			log.Printf("Warning: Reminder service not initialized: %v", err)
+		} else {
+			reminderService.StartScheduler()
+			log.Println("ReminderService started")
+		}
+	}
 
 	r := chi.NewRouter()
 

@@ -237,7 +237,7 @@ func (s *EmailService) buildReminderHTML(teamName, opponent, gameDate, gameTime,
 <html>
 <body style="font-family: sans-serif; padding: 20px;">
     <h2>Game Tomorrow! ⚾</h2>
-    <p>This is a gentle reminder that you have not currently responded or are marked as <strong>'Maybe'</strong> for tomorrow's game with <strong>%s</strong>.</p>
+    <p>This is a reminder that you have not currently responded or are marked as <strong>'Maybe'</strong> for tomorrow's <strong>%s</strong> game.</p>
     <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin: 20px 0;">
         <p><strong>Opponent:</strong> %s</p>
         <p><strong>Date:</strong> %s</p>
@@ -255,7 +255,7 @@ func (s *EmailService) buildReminderText(teamName, opponent, gameDate, gameTime,
 	return fmt.Sprintf(`
 Game Tomorrow!
 
-This is a gentle reminder that you are currently marked as 'Maybe' for tomorrow's game with %s.
+This is a reminder that you have not currently responded or are marked as 'Maybe' for tomorrow's %s game.
 
 Opponent: %s
 Date: %s

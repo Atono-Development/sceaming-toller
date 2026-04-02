@@ -101,7 +101,7 @@ type Game struct {
 	UpdatedAt     time.Time `json:"updatedAt"`
 
 	Team Team `gorm:"foreignKey:TeamID" json:"team,omitempty"`
-	InningScores []InningScore `gorm:"foreignKey:GameID" json:"inningScores,omitempty"`
+	InningScores []InningScore `gorm:"foreignKey:GameID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"inningScores,omitempty"`
 }
 
 func (g *Game) BeforeCreate(tx *gorm.DB) (err error) {
@@ -120,7 +120,7 @@ type Attendance struct {
 	UpdatedAt    time.Time `json:"updatedAt"`
 
 	TeamMember TeamMember `gorm:"foreignKey:TeamMemberID" json:"teamMember,omitempty"`
-	Game       Game       `gorm:"foreignKey:GameID" json:"game,omitempty"`
+	Game       Game       `gorm:"foreignKey:GameID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"game,omitempty"`
 }
 
 func (a *Attendance) BeforeCreate(tx *gorm.DB) (err error) {
@@ -138,7 +138,7 @@ type BattingOrder struct {
 	IsGenerated     bool      `json:"isGenerated"`
 	CreatedAt       time.Time `json:"createdAt"`
 
-	Game       Game       `gorm:"foreignKey:GameID" json:"game,omitempty"`
+	Game       Game       `gorm:"foreignKey:GameID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"game,omitempty"`
 	TeamMember TeamMember `gorm:"foreignKey:TeamMemberID" json:"teamMember,omitempty"`
 }
 
@@ -158,7 +158,7 @@ type FieldingLineup struct {
 	IsGenerated  bool      `json:"isGenerated"`
 	CreatedAt    time.Time `json:"createdAt"`
 
-	Game       Game       `gorm:"foreignKey:GameID" json:"game,omitempty"`
+	Game       Game       `gorm:"foreignKey:GameID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"game,omitempty"`
 	TeamMember TeamMember `gorm:"foreignKey:TeamMemberID" json:"teamMember,omitempty"`
 }
 
@@ -176,7 +176,7 @@ type InningScore struct {
 	TeamScore     int       `json:"teamScore"`
 	OpponentScore int       `json:"opponentScore"`
 
-	Game Game `gorm:"foreignKey:GameID" json:"game,omitempty"`
+	Game Game `gorm:"foreignKey:GameID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"game,omitempty"`
 }
 
 func (is *InningScore) BeforeCreate(tx *gorm.DB) (err error) {

@@ -303,8 +303,7 @@ export function GamesPage() {
                             ? "default"
                             : "outline"
                         }
-                        size="sm"
-                        className={`flex-1 w-full sm:w-auto ${
+                        className={`flex-1 w-full sm:w-auto py-3 h-auto min-h-[3rem] font-bold ${
                           attendanceStates[game.id]?.status === "going"
                             ? "bg-green-600 hover:bg-green-700 text-white"
                             : ""
@@ -319,8 +318,7 @@ export function GamesPage() {
                             ? "default"
                             : "outline"
                         }
-                        size="sm"
-                        className={`flex-1 w-full sm:w-auto ${
+                        className={`flex-1 w-full sm:w-auto py-3 h-auto min-h-[3rem] font-bold ${
                           attendanceStates[game.id]?.status === "maybe"
                             ? "bg-yellow-500 hover:bg-yellow-600 text-white"
                             : ""
@@ -335,8 +333,7 @@ export function GamesPage() {
                             ? "default"
                             : "outline"
                         }
-                        size="sm"
-                        className={`flex-1 w-full sm:w-auto ${
+                        className={`flex-1 w-full sm:w-auto py-3 h-auto min-h-[3rem] font-bold ${
                           attendanceStates[game.id]?.status === "not_going"
                             ? "bg-red-600 hover:bg-red-700 text-white"
                             : ""
@@ -467,7 +464,7 @@ export function GamesPage() {
                             ? "default"
                             : "outline"
                         }
-                        className={`flex-1 ${
+                        className={`flex-1 flex-col sm:flex-row py-3 h-auto min-h-[3rem] font-bold ${
                           attendanceStates[game.id]?.status === "going"
                             ? "bg-green-600 hover:bg-green-700 text-white"
                             : ""
@@ -482,7 +479,7 @@ export function GamesPage() {
                             ? "default"
                             : "outline"
                         }
-                        className={`flex-1 ${
+                        className={`flex-1 flex-col sm:flex-row py-3 h-auto min-h-[3rem] font-bold ${
                           attendanceStates[game.id]?.status === "maybe"
                             ? "bg-yellow-500 hover:bg-yellow-600 text-white"
                             : ""
@@ -497,7 +494,7 @@ export function GamesPage() {
                             ? "default"
                             : "outline"
                         }
-                        className={`flex-1 ${
+                        className={`flex-1 flex-col sm:flex-row py-3 h-auto min-h-[3rem] font-bold ${
                           attendanceStates[game.id]?.status === "not_going"
                             ? "bg-red-600 hover:bg-red-700 text-white"
                             : ""

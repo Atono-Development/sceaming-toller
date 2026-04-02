@@ -13,6 +13,7 @@ type User struct {
 	Name         string    `json:"name"`
 	Email        string    `gorm:"uniqueIndex" json:"email"`
 	IsSuperAdmin bool      `gorm:"default:false" json:"isSuperAdmin"`
+	OptOutReminders bool   `gorm:"default:false" json:"optOutReminders"`
 	CreatedAt    time.Time `json:"createdAt"`
 	UpdatedAt    time.Time `json:"updatedAt"`
 }
@@ -115,6 +116,7 @@ type Attendance struct {
 	TeamMemberID uuid.UUID `gorm:"type:uuid;index" json:"teamMemberId"`
 	GameID       uuid.UUID `gorm:"type:uuid;index" json:"gameId"`
 	Status       string    `json:"status"` // "going", "not_going", "maybe"
+	ReminderSentAt *time.Time `json:"reminderSentAt,omitempty"`
 	UpdatedAt    time.Time `json:"updatedAt"`
 
 	TeamMember TeamMember `gorm:"foreignKey:TeamMemberID" json:"teamMember,omitempty"`

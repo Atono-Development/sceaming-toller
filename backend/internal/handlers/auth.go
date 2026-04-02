@@ -21,7 +21,8 @@ type AuthResponse struct {
 }
 
 type UpdateUserRequest struct {
-	Name string `json:"name"`
+	Name           string `json:"name"`
+	OptOutReminders bool   `json:"optOutReminders"`
 }
 
 func SyncUser(w http.ResponseWriter, r *http.Request) {
@@ -178,6 +179,7 @@ func UpdateMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user.Name = req.Name
+	user.OptOutReminders = req.OptOutReminders
 	if result := database.DB.Save(&user); result.Error != nil {
 		http.Error(w, "Failed to update user", http.StatusInternalServerError)
 		return

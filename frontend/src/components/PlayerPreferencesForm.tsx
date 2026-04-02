@@ -37,6 +37,7 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
+  const [optOutReminders, setOptOutReminders] = useState(false);
   const { toast } = useToast();
   const { user, updateUser } = useAuth();
 
@@ -57,6 +58,7 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
       // Initialize name from auth user if not set
       if (user && !name) {
         setName(user.name || "");
+        setOptOutReminders(user.optOutReminders || false);
       }
     } catch {
       toast({
@@ -123,9 +125,9 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
         await updateMyGender(teamId, gender);
       }
 
-      // Save name if changed
-      if (user && name !== user.name) {
-        const updatedUser = await updateMe(name);
+      // Save name or opt-out if changed
+      if (user && (name !== user.name || optOutReminders !== user.optOutReminders)) {
+        const updatedUser = await updateMe(name, optOutReminders);
         updateUser(updatedUser);
       }
 
@@ -216,8 +218,30 @@ const PlayerPreferencesForm: React.FC<PlayerPreferencesFormProps> = ({
             <Label htmlFor="pitcher">I am a pitcher</Label>
           </div>
           <div className="text-sm text-muted-foreground">
-            Pitchers are included in the batting order but not counted as
+            Pitchers are included for the batting order but not counted as
             fielding preferences.
+          </div>
+
+          <div className="pt-4 border-t border-slate-100">
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="reminders"
+                checked={optOutReminders}
+                onCheckedChange={(checked: boolean) => setOptOutReminders(checked)}
+                className="mt-1"
+              />
+              <div className="grid gap-1.5 leading-none">
+                <Label
+                  htmlFor="reminders"
+                  className="text-sm font-bold leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Opt out of game attendance reminders
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Stop receiving emails before a game if you have not responded or are marked as "Maybe".
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 

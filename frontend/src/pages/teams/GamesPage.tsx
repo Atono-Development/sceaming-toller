@@ -190,7 +190,7 @@ export function GamesPage() {
         )}
       </div>
 
-      <div className="grid gap-4">
+      <div className="flex flex-col gap-4 min-w-0 w-full">
         {/* Upcoming Games Section */}
         {upcomingGames && upcomingGames.length > 0 && (
           <>
@@ -204,7 +204,7 @@ export function GamesPage() {
                     vs {game.opposingTeam}
                   </CardTitle>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <div className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                    <div className="text-sm font-medium text-muted-foreground">
                       {format(utcToLocalDate(game.date), "MMM d, yyyy")} •{" "}
                       {game.time}
                     </div>
@@ -368,7 +368,7 @@ export function GamesPage() {
                     vs {game.opposingTeam}
                   </CardTitle>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <div className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                    <div className="text-sm font-medium text-muted-foreground">
                       {format(utcToLocalDate(game.date), "MMM d, yyyy")} •{" "}
                       {game.time}
                     </div>

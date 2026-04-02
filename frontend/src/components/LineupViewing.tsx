@@ -163,35 +163,37 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="mb-4">
+        <div className="mb-4 flex flex-wrap gap-2">
           <Button
             onClick={generateAllInnings}
             disabled={loading}
-            className="flex items-center gap-2"
+            size="sm"
+            className="flex items-center justify-center gap-2 w-full sm:w-auto h-auto py-2 whitespace-normal text-center sm:text-left"
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            Generate All 7 Innings (Balanced)
+            <RefreshCw className={`h-4 w-4 shrink-0 ${loading ? "animate-spin" : ""}`} />
+            <span>Generate All 7 Innings (Balanced)</span>
           </Button>
         </div>
         <Tabs defaultValue="batting" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="batting">Batting Order</TabsTrigger>
-            <TabsTrigger value="fielding">Fielding Positions</TabsTrigger>
-            <TabsTrigger value="stats">Playing Time</TabsTrigger>
+          <TabsList className="flex flex-col h-auto sm:grid sm:grid-cols-3 sm:h-10">
+            <TabsTrigger value="batting" className="w-full">Batting Order</TabsTrigger>
+            <TabsTrigger value="fielding" className="w-full">Fielding Positions</TabsTrigger>
+            <TabsTrigger value="stats" className="w-full">Playing Time</TabsTrigger>
           </TabsList>
 
           <TabsContent value="batting" className="space-y-4">
-            <div className="mb-4">
+            <div className="mb-4 flex flex-wrap gap-2">
               <Button
                 onClick={generateBattingOrderLineup}
                 disabled={loading}
-                className="flex items-center gap-2"
+                size="sm"
+                className="flex items-center justify-center gap-2 w-full sm:w-auto h-auto py-2 whitespace-normal text-center sm:text-left"
                 variant="outline"
               >
                 <RefreshCw
-                  className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                  className={`h-4 w-4 shrink-0 ${loading ? "animate-spin" : ""}`}
                 />
-                Regenerate Batting Order
+                <span>Regenerate Batting Order</span>
               </Button>
             </div>
             {battingOrder.length === 0 ? (
@@ -249,28 +251,62 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
               <div className="space-y-6">
                 {Object.entries(fieldingByInning)
                   .sort(([a], [b]) => parseInt(a) - parseInt(b))
-                  .map(([inning, players]) => (
-                    <div key={inning} className="space-y-2">
-                      <h3 className="text-lg font-semibold">Inning {inning}</h3>
-                      <div className="grid grid-cols-3 gap-2">
-                        {players.map((player) => (
-                          <div
-                            key={player.id}
-                            className="flex items-center gap-2 p-2 rounded border"
-                          >
-                            <Badge
-                              className={getPositionColor(player.position)}
-                            >
-                              {player.position}
-                            </Badge>
-                            <span className="text-sm font-medium">
-                              {player.teamMember?.user?.name || "Unknown"}
-                            </span>
+                  .map(([inning, players]) => {
+                    const fieldingPlayers = players.filter((p) => p.position !== "Bench");
+                    const benchPlayers = players.filter((p) => p.position === "Bench");
+
+                    return (
+                      <div key={inning} className="space-y-4">
+                        <h3 className="text-lg font-semibold">Inning {inning}</h3>
+                        
+                        {/* Fielding Positions */}
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium text-muted-foreground">
+                            Fielding Positions
+                          </h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {fieldingPlayers.map((player) => (
+                              <div
+                                key={player.id}
+                                className="flex items-center gap-2 p-2 rounded border bg-white"
+                              >
+                                <Badge className={getPositionColor(player.position)}>
+                                  {player.position}
+                                </Badge>
+                                <span className="text-sm font-medium">
+                                  {player.teamMember?.user?.name || "Unknown"}
+                                </span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        </div>
+
+                        {/* Bench Players */}
+                        {benchPlayers.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-medium text-muted-foreground">
+                              On Bench
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                              {benchPlayers.map((player) => (
+                                <div
+                                  key={player.id}
+                                  className="flex items-center gap-2 p-2 rounded border bg-gray-50"
+                                >
+                                  <Badge variant="secondary" className="bg-gray-400">
+                                    Bench
+                                  </Badge>
+                                  <span className="text-sm font-medium">
+                                    {player.teamMember?.user?.name || "Unknown"}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
             )}
           </TabsContent>

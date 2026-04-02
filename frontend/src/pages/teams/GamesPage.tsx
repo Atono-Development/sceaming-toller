@@ -177,11 +177,11 @@ export function GamesPage() {
     ); // Most recent past games first;
 
   return (
-    <div className="container py-8 space-y-6">
-      <div className="flex items-center justify-between border-b-4 border-black pb-4 mb-4">
+    <div className="py-4 sm:py-8 space-y-6 px-2 sm:px-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b-4 border-black pb-4 mb-4">
         <h1 className="text-4xl font-black uppercase tracking-tighter">Schedule</h1>
         {currentTeam?.membership?.isAdmin && (
-          <Button asChild variant="brutalist-orange">
+          <Button asChild variant="brutalist-orange" className="w-full sm:w-auto">
             <Link to={`/teams/${teamId}/games/new`}>
               <Plus className="mr-2 h-4 w-4" />
               Add Game
@@ -190,7 +190,7 @@ export function GamesPage() {
         )}
       </div>
 
-      <div className="grid gap-4">
+      <div className="flex flex-col gap-4 min-w-0 w-full">
         {/* Upcoming Games Section */}
         {upcomingGames && upcomingGames.length > 0 && (
           <>
@@ -198,12 +198,12 @@ export function GamesPage() {
               Upcoming Games
             </div>
             {upcomingGames.map((game: any) => (
-              <Card key={game.id}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xl font-semibold">
+              <Card key={game.id} className="overflow-visible">
+                <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between space-y-0 p-4 sm:p-6 pb-2">
+                  <CardTitle className="text-xl font-semibold break-words">
                     vs {game.opposingTeam}
                   </CardTitle>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                     <div className="text-sm font-medium text-muted-foreground">
                       {format(utcToLocalDate(game.date), "MMM d, yyyy")} •{" "}
                       {game.time}
@@ -231,49 +231,41 @@ export function GamesPage() {
                     )}
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6 pt-0">
                   <div className="text-sm text-muted-foreground">
                     Location: {game.location}
                   </div>
 
                   {/* Team Attendance List */}
-                  <div className="mt-2 space-y-1">
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
                     {expandedGames[game.id]
                       ? gameAttendance[game.id]?.map((att) => (
-                          <div
+                          <Badge
                             key={att.id}
-                            className="inline-flex items-center gap-1 mr-2 mb-1"
+                            size="sm"
+                            className={`${getStatusColor(
+                              att.status
+                            )} text-white`}
                           >
-                            <Badge
-                              size="sm"
-                              className={`${getStatusColor(
-                                att.status
-                              )} text-white`}
-                            >
-                              {att.teamMember?.user?.name || "Unknown"}
-                            </Badge>
-                          </div>
+                            {att.teamMember?.user?.name || "Unknown"}
+                          </Badge>
                         ))
                       : gameAttendance[game.id]?.slice(0, 3).map((att) => (
-                          <div
+                          <Badge
                             key={att.id}
-                            className="inline-flex items-center gap-1 mr-2 mb-1"
+                            size="sm"
+                            className={`${getStatusColor(
+                              att.status
+                            )} text-white`}
                           >
-                            <Badge
-                              size="sm"
-                              className={`${getStatusColor(
-                                att.status
-                              )} text-white`}
-                            >
-                              {att.teamMember?.user?.name || "Unknown"}
-                            </Badge>
-                          </div>
+                            {att.teamMember?.user?.name || "Unknown"}
+                          </Badge>
                         ))}
                     {gameAttendance[game.id] &&
                       gameAttendance[game.id].length > 3 && (
                         <button
                           onClick={() => toggleGameExpansion(game.id)}
-                          className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 underline ml-2"
+                          className="text-xs text-blue-600 hover:text-blue-800 underline ml-1"
                         >
                           {expandedGames[game.id]
                             ? "Show less"
@@ -304,14 +296,14 @@ export function GamesPage() {
                     <div className="text-sm text-slate-600 mb-2">
                       Your attendance:
                     </div>
-                    <div className="flex space-x-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Button
                         variant={
                           attendanceStates[game.id]?.status === "going"
                             ? "default"
                             : "outline"
                         }
-                        className={`flex-1 ${
+                        className={`flex-1 w-full sm:w-auto py-3 h-auto min-h-[3rem] font-bold ${
                           attendanceStates[game.id]?.status === "going"
                             ? "bg-green-600 hover:bg-green-700 text-white"
                             : ""
@@ -326,7 +318,7 @@ export function GamesPage() {
                             ? "default"
                             : "outline"
                         }
-                        className={`flex-1 ${
+                        className={`flex-1 w-full sm:w-auto py-3 h-auto min-h-[3rem] font-bold ${
                           attendanceStates[game.id]?.status === "maybe"
                             ? "bg-yellow-500 hover:bg-yellow-600 text-white"
                             : ""
@@ -341,7 +333,7 @@ export function GamesPage() {
                             ? "default"
                             : "outline"
                         }
-                        className={`flex-1 ${
+                        className={`flex-1 w-full sm:w-auto py-3 h-auto min-h-[3rem] font-bold ${
                           attendanceStates[game.id]?.status === "not_going"
                             ? "bg-red-600 hover:bg-red-700 text-white"
                             : ""
@@ -367,12 +359,12 @@ export function GamesPage() {
               Past Games
             </div>
             {pastGames.map((game: any) => (
-              <Card key={game.id} className="opacity-75">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xl font-semibold">
+              <Card key={game.id} className="opacity-75 overflow-visible">
+                <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between space-y-0 p-4 sm:p-6 pb-2">
+                  <CardTitle className="text-xl font-semibold break-words">
                     vs {game.opposingTeam}
                   </CardTitle>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                     <div className="text-sm font-medium text-muted-foreground">
                       {format(utcToLocalDate(game.date), "MMM d, yyyy")} •{" "}
                       {game.time}
@@ -400,49 +392,41 @@ export function GamesPage() {
                     )}
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6 pt-0">
                   <div className="text-sm text-muted-foreground">
                     Location: {game.location}
                   </div>
 
                   {/* Team Attendance List */}
-                  <div className="mt-2 space-y-1">
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
                     {expandedGames[game.id]
                       ? gameAttendance[game.id]?.map((att) => (
-                          <div
+                          <Badge
                             key={att.id}
-                            className="inline-flex items-center gap-1 mr-2 mb-1"
+                            size="sm"
+                            className={`${getStatusColor(
+                              att.status
+                            )} text-white`}
                           >
-                            <Badge
-                              size="sm"
-                              className={`${getStatusColor(
-                                att.status
-                              )} text-white`}
-                            >
-                              {att.teamMember?.user?.name || "Unknown"}
-                            </Badge>
-                          </div>
+                            {att.teamMember?.user?.name || "Unknown"}
+                          </Badge>
                         ))
                       : gameAttendance[game.id]?.slice(0, 3).map((att) => (
-                          <div
+                          <Badge
                             key={att.id}
-                            className="inline-flex items-center gap-1 mr-2 mb-1"
+                            size="sm"
+                            className={`${getStatusColor(
+                              att.status
+                            )} text-white`}
                           >
-                            <Badge
-                              size="sm"
-                              className={`${getStatusColor(
-                                att.status
-                              )} text-white`}
-                            >
-                              {att.teamMember?.user?.name || "Unknown"}
-                            </Badge>
-                          </div>
+                            {att.teamMember?.user?.name || "Unknown"}
+                          </Badge>
                         ))}
                     {gameAttendance[game.id] &&
                       gameAttendance[game.id].length > 3 && (
                         <button
                           onClick={() => toggleGameExpansion(game.id)}
-                          className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 underline ml-2"
+                          className="text-xs text-blue-600 hover:text-blue-800 underline ml-1"
                         >
                           {expandedGames[game.id]
                             ? "Show less"
@@ -480,7 +464,7 @@ export function GamesPage() {
                             ? "default"
                             : "outline"
                         }
-                        className={`flex-1 ${
+                        className={`flex-1 flex-col sm:flex-row py-3 h-auto min-h-[3rem] font-bold ${
                           attendanceStates[game.id]?.status === "going"
                             ? "bg-green-600 hover:bg-green-700 text-white"
                             : ""
@@ -495,7 +479,7 @@ export function GamesPage() {
                             ? "default"
                             : "outline"
                         }
-                        className={`flex-1 ${
+                        className={`flex-1 flex-col sm:flex-row py-3 h-auto min-h-[3rem] font-bold ${
                           attendanceStates[game.id]?.status === "maybe"
                             ? "bg-yellow-500 hover:bg-yellow-600 text-white"
                             : ""
@@ -510,7 +494,7 @@ export function GamesPage() {
                             ? "default"
                             : "outline"
                         }
-                        className={`flex-1 ${
+                        className={`flex-1 flex-col sm:flex-row py-3 h-auto min-h-[3rem] font-bold ${
                           attendanceStates[game.id]?.status === "not_going"
                             ? "bg-red-600 hover:bg-red-700 text-white"
                             : ""

@@ -95,9 +95,11 @@ const PlayerDashboard: React.FC = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold">Player Dashboard</h1>
-        <TeamSelector />
+        <div className="w-full sm:w-auto">
+          <TeamSelector />
+        </div>
       </div>
 
       {!selectedTeam ? (

@@ -177,11 +177,11 @@ export function GamesPage() {
     ); // Most recent past games first;
 
   return (
-    <div className="container py-8 space-y-6">
-      <div className="flex items-center justify-between border-b-4 border-black pb-4 mb-4">
+    <div className="py-8 space-y-6 pr-2">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b-4 border-black pb-4 mb-4">
         <h1 className="text-4xl font-black uppercase tracking-tighter">Schedule</h1>
         {currentTeam?.membership?.isAdmin && (
-          <Button asChild variant="brutalist-orange">
+          <Button asChild variant="brutalist-orange" className="w-full sm:w-auto">
             <Link to={`/teams/${teamId}/games/new`}>
               <Plus className="mr-2 h-4 w-4" />
               Add Game
@@ -199,12 +199,12 @@ export function GamesPage() {
             </div>
             {upcomingGames.map((game: any) => (
               <Card key={game.id}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between space-y-0 p-4 sm:p-6 pb-2">
                   <CardTitle className="text-xl font-semibold">
                     vs {game.opposingTeam}
                   </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-medium text-muted-foreground">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div className="text-sm font-medium text-muted-foreground whitespace-nowrap">
                       {format(utcToLocalDate(game.date), "MMM d, yyyy")} •{" "}
                       {game.time}
                     </div>
@@ -231,7 +231,7 @@ export function GamesPage() {
                     )}
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6 pt-0">
                   <div className="text-sm text-muted-foreground">
                     Location: {game.location}
                   </div>
@@ -304,14 +304,15 @@ export function GamesPage() {
                     <div className="text-sm text-slate-600 mb-2">
                       Your attendance:
                     </div>
-                    <div className="flex space-x-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Button
                         variant={
                           attendanceStates[game.id]?.status === "going"
                             ? "default"
                             : "outline"
                         }
-                        className={`flex-1 ${
+                        size="sm"
+                        className={`flex-1 w-full sm:w-auto ${
                           attendanceStates[game.id]?.status === "going"
                             ? "bg-green-600 hover:bg-green-700 text-white"
                             : ""
@@ -326,7 +327,8 @@ export function GamesPage() {
                             ? "default"
                             : "outline"
                         }
-                        className={`flex-1 ${
+                        size="sm"
+                        className={`flex-1 w-full sm:w-auto ${
                           attendanceStates[game.id]?.status === "maybe"
                             ? "bg-yellow-500 hover:bg-yellow-600 text-white"
                             : ""
@@ -341,7 +343,8 @@ export function GamesPage() {
                             ? "default"
                             : "outline"
                         }
-                        className={`flex-1 ${
+                        size="sm"
+                        className={`flex-1 w-full sm:w-auto ${
                           attendanceStates[game.id]?.status === "not_going"
                             ? "bg-red-600 hover:bg-red-700 text-white"
                             : ""
@@ -368,12 +371,12 @@ export function GamesPage() {
             </div>
             {pastGames.map((game: any) => (
               <Card key={game.id} className="opacity-75">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between space-y-0 p-4 sm:p-6 pb-2">
                   <CardTitle className="text-xl font-semibold">
                     vs {game.opposingTeam}
                   </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-medium text-muted-foreground">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div className="text-sm font-medium text-muted-foreground whitespace-nowrap">
                       {format(utcToLocalDate(game.date), "MMM d, yyyy")} •{" "}
                       {game.time}
                     </div>
@@ -400,7 +403,7 @@ export function GamesPage() {
                     )}
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6 pt-0">
                   <div className="text-sm text-muted-foreground">
                     Location: {game.location}
                   </div>

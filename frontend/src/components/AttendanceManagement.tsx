@@ -230,7 +230,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
         {/* Attendance Summary */}
         <div className="space-y-2">
           <h3 className="text-lg font-semibold">Attendance Summary</h3>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               <span className="text-sm">Going: {goingCount}</span>
@@ -298,6 +298,8 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                 onClick={handleInitializeAttendance}
                 disabled={saving}
                 variant="outline"
+                size="sm"
+                className="w-full sm:w-auto"
               >
                 {saving ? "Initializing..." : "Initialize Missing Attendance"}
               </Button>

@@ -299,7 +299,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
                 disabled={saving}
                 variant="outline"
                 size="sm"
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto h-auto min-h-[2.5rem] py-2 whitespace-normal text-center"
               >
                 {saving ? "Initializing..." : "Initialize Missing Attendance"}
               </Button>

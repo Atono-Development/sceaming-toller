@@ -5,6 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import {
@@ -159,18 +160,23 @@ export function EditPlayerDialog({
             </div>
           ))}
 
-          <div className="flex justify-end space-x-2 pt-4">
+          <DialogFooter className="pt-4">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={saving}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button 
+              onClick={handleSave} 
+              disabled={saving}
+              className="w-full sm:w-auto"
+            >
               {saving ? "Saving..." : "Save Changes"}
             </Button>
-          </div>
+          </DialogFooter>
         </div>
       </DialogContent>
     </Dialog>

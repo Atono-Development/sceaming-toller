@@ -42,7 +42,7 @@ export function MobileRosterCard({
 }: MobileRosterCardProps) {
   return (
     <Card className="mb-4">
-      <CardHeader className="pb-2">
+      <CardHeader className="p-4 pb-2">
         <div className="flex justify-between items-start">
           <div>
             <div className="font-semibold text-lg">{member.user?.name}</div>
@@ -53,7 +53,7 @@ export function MobileRosterCard({
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="p-4 pt-0 space-y-4">
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div>
             <span className="text-muted-foreground block mb-1">Roles</span>
@@ -100,10 +100,11 @@ export function MobileRosterCard({
         )}
 
         {isAdmin && (
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex flex-wrap justify-end gap-2 pt-2">
             {onEdit && (
               <Button
                 variant="ghost"
+                size="sm"
                 className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                 onClick={() => onEdit(member)}
               >
@@ -113,6 +114,7 @@ export function MobileRosterCard({
             )}
             <Button
               variant="ghost"
+              size="sm"
               className="text-red-600 hover:text-red-700 hover:bg-red-50"
               onClick={() => onRemove(member.id)}
               disabled={member.isAdmin}

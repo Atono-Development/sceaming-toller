@@ -167,15 +167,20 @@ export function EditGamePage() {
 
               {error && <p className="text-sm text-red-500">{error}</p>}
 
-              <div className="flex justify-end gap-4">
+              <div className="flex flex-wrap justify-end gap-4">
                 <Button
                   variant="outline"
                   type="button"
                   onClick={() => navigate(-1)}
+                  className="w-full sm:w-auto"
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={updateGameMutation.isPending}>
+                <Button 
+                  type="submit" 
+                  disabled={updateGameMutation.isPending}
+                  className="w-full sm:w-auto"
+                >
                   {updateGameMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}

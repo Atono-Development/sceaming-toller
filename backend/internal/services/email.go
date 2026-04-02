@@ -127,7 +127,7 @@ func (s *EmailService) SendTeamRejectedEmail(toEmail, teamName string) error {
 // SendAttendanceReminderEmail sends a reminder to a user marked as 'maybe' for an upcoming game
 func (s *EmailService) SendAttendanceReminderEmail(toEmail, teamName, opponent, gameDate, gameTime, location, teamID string) error {
 	attendanceURL := fmt.Sprintf("%s/teams/%s/games", s.appURL, teamID) // Corrected to use teamID
-	subject := fmt.Sprintf("Gentle Reminder: Game tomorrow vs %s", opponent)
+	subject := fmt.Sprintf("Game tomorrow vs %s", opponent)
 
 	htmlContent := s.buildReminderHTML(teamName, opponent, gameDate, gameTime, location, attendanceURL)
 	textContent := s.buildReminderText(teamName, opponent, gameDate, gameTime, location, attendanceURL)

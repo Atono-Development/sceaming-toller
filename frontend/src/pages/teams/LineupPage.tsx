@@ -781,7 +781,8 @@ const LineupPage: React.FC = () => {
               <Button
                 onClick={generateAllInnings}
                 disabled={loading}
-                className="flex items-center gap-2"
+                size="sm"
+                className="flex items-center gap-2 w-full sm:w-auto"
               >
                 <RefreshCw
                   className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
@@ -791,7 +792,8 @@ const LineupPage: React.FC = () => {
               <Button
                 onClick={generateBattingOrderLineup}
                 disabled={loading}
-                className="flex items-center gap-2"
+                size="sm"
+                className="flex items-center gap-2 w-full sm:w-auto"
                 variant="outline"
               >
                 <RefreshCw
@@ -802,7 +804,8 @@ const LineupPage: React.FC = () => {
               <Button
                 onClick={() => setShowPrintView(!showPrintView)}
                 disabled={loading || battingOrder.length === 0}
-                className="flex items-center gap-2"
+                size="sm"
+                className="flex items-center gap-2 w-full sm:w-auto"
                 variant="secondary"
               >
                 <Printer className="h-4 w-4" />
@@ -810,10 +813,10 @@ const LineupPage: React.FC = () => {
               </Button>
             </div>
             <Tabs defaultValue="batting" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="batting">Batting Order</TabsTrigger>
-                <TabsTrigger value="fielding">Fielding Positions</TabsTrigger>
-                <TabsTrigger value="stats">Playing Time</TabsTrigger>
+              <TabsList className="flex flex-col h-auto sm:grid sm:grid-cols-3 sm:h-10">
+                <TabsTrigger value="batting" className="w-full">Batting Order</TabsTrigger>
+                <TabsTrigger value="fielding" className="w-full">Fielding Positions</TabsTrigger>
+                <TabsTrigger value="stats" className="w-full">Playing Time</TabsTrigger>
               </TabsList>
 
               <TabsContent value="batting" className="space-y-4">

@@ -61,7 +61,7 @@ export function MobileMenu() {
             <nav className="flex flex-col space-y-2 mt-2">
               <Button
                 variant="default"
-                className="justify-start h-14 text-lg"
+                className="justify-start h-12 text-base sm:h-14 sm:text-lg"
                 onClick={() => handleNavigation('/admin/teams')}
               >
                 Admin Dashboard

@@ -118,11 +118,18 @@ export function CreateGamePage() {
 
               {error && <p className="text-sm text-red-500">{error}</p>}
               
-              <div className="flex justify-end gap-4">
-                <Button variant="outline" type="button" onClick={() => navigate(-1)}>
+              <div className="flex flex-wrap justify-end gap-4">
+                <Button 
+                  variant="outline" 
+                  type="button" 
+                  onClick={() => navigate(-1)}
+                  className="w-full sm:w-auto"
+                >
                   Cancel
                 </Button>
-                <Button type="submit">Schedule Game</Button>
+                <Button type="submit" className="w-full sm:w-auto">
+                  Schedule Game
+                </Button>
               </div>
             </form>
           </Form>

@@ -44,3 +44,6 @@ frontend/*.local
 
 # Docker
 docker-compose.override.yml
+
+# Backend Uploads
+backend/uploads/

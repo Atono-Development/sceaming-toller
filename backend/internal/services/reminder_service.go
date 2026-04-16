@@ -74,16 +74,24 @@ func (s *ReminderService) ProcessUpcomingReminders() {
 		// game.Date is YYYY-MM-DD 00:00:00 UTC
 		// game.Time is "HH:MM"
 		var hour, min int
-		fmt.Sscanf(game.Time, "%d:%d", &hour, &min)
+		n, _ := fmt.Sscanf(game.Time, "%d:%d", &hour, &min)
+		if n < 2 {
+			log.Printf("ReminderService Warning: Failed to parse time '%s' for game %s", game.Time, game.ID)
+			continue
+		}
 
 		gameTimePDT := time.Date(game.Date.Year(), game.Date.Month(), game.Date.Day(), hour, min, 0, 0, s.location)
 		
-		// Target reminder time is 24 hours before game time
-		reminderWindowStart := gameTimePDT.Add(-25 * time.Hour)
-		reminderWindowEnd := gameTimePDT.Add(-23 * time.Hour)
+		// Target reminder window: 26 hours before to 2 hours before game time
+		// This handles the 4-hour ticker frequency much better than a tight window.
+		reminderWindowStart := gameTimePDT.Add(-26 * time.Hour)
+		reminderWindowEnd := gameTimePDT.Add(-2 * time.Hour)
 
 		if now.After(reminderWindowStart) && now.Before(reminderWindowEnd) {
 			s.sendRemindersForGame(game, gameTimePDT)
+		} else {
+			// Subtle log for debugging if needed, but maybe too noisy for production if there are many games
+			// log.Printf("ReminderService: Game %s skipped (Time: %v, Window: %v to %v, Now: %v)", game.ID, gameTimePDT, reminderWindowStart, reminderWindowEnd, now)
 		}
 	}
 }
@@ -97,6 +105,12 @@ func (s *ReminderService) sendRemindersForGame(game models.Game, gameTime time.T
 		Find(&attendances).Error; err != nil {
 		log.Printf("ReminderService Error: Failed to fetch attendances for game %s: %v", game.ID, err)
 		return
+	}
+
+	if len(attendances) > 0 {
+		log.Printf("ReminderService: Found %d 'maybe' players to remind for game %s", len(attendances), game.ID)
+	} else {
+		log.Printf("ReminderService: No 'maybe' players to remind (or reminders already sent) for game %s", game.ID)
 	}
 
 	for _, att := range attendances {

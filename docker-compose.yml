@@ -12,6 +12,8 @@ services:
       - ENV=${ENV:-development}
     depends_on:
       - db
+    volumes:
+      - ./backend/uploads:/app/uploads
 
   frontend:
     build:

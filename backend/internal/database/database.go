@@ -54,6 +54,9 @@ func InitDB() {
 
 	// Ensure game constraints are cascading
 	fixGameConstraints(DB)
+
+	// Migrate game date to DATE type
+	migrateGameDateToDateType(DB)
 }
 
 func migrateRoles(db *gorm.DB) {
@@ -131,5 +134,25 @@ func fixGameConstraints(db *gorm.DB) {
 				log.Printf("Fixed constraint %s on table %s (ON DELETE CASCADE)", name, table)
 			}
 		}
+	}
+}
+
+func migrateGameDateToDateType(db *gorm.DB) {
+	log.Println("Migrating games table date column to DATE type...")
+
+	// We need to cast the existing TIMESTAMP WITH TIME ZONE to DATE.
+	// We MUST cast it to UTC first to ensure that UTC midnight values
+	// (like 2026-04-16 00:00:00 UTC) correctly become the date '2026-04-16'
+	// instead of shifting to '2026-04-15' if cast in local PDT time.
+	err := db.Exec(`
+		ALTER TABLE games 
+		ALTER COLUMN date TYPE DATE 
+		USING (date AT TIME ZONE 'UTC')::DATE;
+	`).Error
+
+	if err != nil {
+		log.Printf("Warning: Failed to migrate game date column: %v", err)
+	} else {
+		log.Println("Successfully migrated game date column to DATE type")
 	}
 }

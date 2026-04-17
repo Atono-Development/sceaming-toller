@@ -759,7 +759,7 @@ const LineupPage: React.FC = () => {
               {games.map((game) => (
                 <SelectItem key={game.id} value={game.id}>
                   {game.opposingTeam} -{" "}
-                  {new Date(game.date).toLocaleDateString()}
+                  {utcToLocalDate(game.date).toLocaleDateString()}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -772,7 +772,7 @@ const LineupPage: React.FC = () => {
           <CardHeader>
             <CardTitle>Lineups - {selectedGame.opposingTeam}</CardTitle>
             <div className="text-sm text-muted-foreground">
-              {new Date(selectedGame.date).toLocaleDateString()} at{" "}
+              {utcToLocalDate(selectedGame.date).toLocaleDateString()} at{" "}
               {selectedGame.time} • {selectedGame.location}
             </div>
           </CardHeader>

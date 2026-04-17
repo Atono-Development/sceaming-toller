@@ -1,5 +1,6 @@
 import React from "react";
 import { type BattingOrder, type Game } from "@/api/games";
+import { utcToLocalDate } from "@/utils/dateUtils";
 
 interface Player {
   id: string;
@@ -46,7 +47,7 @@ const PrintableLineup: React.FC<PrintableLineupProps> = ({
           vs. {game.opposingTeam}
         </h2>
         <p className="text-sm text-gray-600">
-          {new Date(game.date).toLocaleDateString()} at {game.location}
+          {utcToLocalDate(game.date).toLocaleDateString()} at {game.location}
         </p>
       </div>
 

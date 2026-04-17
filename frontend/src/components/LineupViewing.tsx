@@ -15,6 +15,7 @@ import {
   type Game,
 } from "../api/games";
 import { useToast } from "../hooks/use-toast";
+import { utcToLocalDate } from "../utils/dateUtils";
 
 interface LineupViewingProps {
   teamId: string;
@@ -158,7 +159,7 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
       <CardHeader>
         <CardTitle>Lineups - {game.opposingTeam}</CardTitle>
         <div className="text-sm text-muted-foreground">
-          {new Date(game.date).toLocaleDateString()} at {game.time} •{" "}
+          {utcToLocalDate(game.date).toLocaleDateString()} at {game.time} •{" "}
           {game.location}
         </div>
       </CardHeader>

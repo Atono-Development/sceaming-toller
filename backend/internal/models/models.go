@@ -90,7 +90,7 @@ func (tmp *TeamMemberPreference) BeforeCreate(tx *gorm.DB) (err error) {
 type Game struct {
 	ID            uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
 	TeamID        uuid.UUID `gorm:"type:uuid;index" json:"teamId"`
-	Date          time.Time `gorm:"index" json:"date"`
+	Date          time.Time `gorm:"type:date;index" json:"date"`
 	Time          string    `json:"time"`
 	Location      string    `json:"location"`
 	OpposingTeam  string    `json:"opposingTeam"`

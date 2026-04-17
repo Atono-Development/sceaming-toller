@@ -21,6 +21,7 @@ import {
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "../contexts/AuthContext";
 import { useTeamContext } from "../contexts/TeamContext";
+import { utcToLocalDate } from "../utils/dateUtils";
 
 interface AttendanceManagementProps {
   teamId: string;
@@ -203,7 +204,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({
       <CardHeader>
         <CardTitle>Attendance - {game.opposingTeam}</CardTitle>
         <div className="text-sm text-muted-foreground">
-          {new Date(game.date).toLocaleDateString()} at {game.time} •{" "}
+          {utcToLocalDate(game.date).toLocaleDateString()} at {game.time} •{" "}
           {game.location}
         </div>
       </CardHeader>

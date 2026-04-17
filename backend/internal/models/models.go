@@ -94,6 +94,7 @@ type Game struct {
 	Time          string    `json:"time"`
 	Location      string    `json:"location"`
 	OpposingTeam  string    `json:"opposingTeam"`
+	IsHome        bool      `gorm:"default:true" json:"isHome"`
 	FinalScore    *int      `json:"finalScore,omitempty"`
 	OpponentScore *int      `json:"opponentScore,omitempty"`
 	Status        string    `gorm:"default:'scheduled'" json:"status"` // "scheduled", "in_progress", "completed", "cancelled"

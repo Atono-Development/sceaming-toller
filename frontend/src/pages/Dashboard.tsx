@@ -18,6 +18,7 @@ interface Game {
   time: string;
   location: string;
   opposingTeam: string;
+  isHome: boolean;
   status: string;
 }
 
@@ -190,6 +191,9 @@ export default function Dashboard() {
                   <div className="flex-grow flex flex-col justify-between space-y-6 text-center lg:text-left">
                     <div>
                       <h3 className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-2 leading-none">
+                        <span className="inline-block px-3 py-1 bg-orange-600 text-black text-sm md:text-lg mb-2 mr-2 border-4 border-black align-middle">
+                          {upcomingGames[0].isHome ? "HOME" : "AWAY"}
+                        </span>
                         vs {upcomingGames[0].opposingTeam}
                       </h3>
                       <div className="space-y-1 font-bold text-lg md:text-xl uppercase">
@@ -346,7 +350,10 @@ export default function Dashboard() {
                     <div className="space-y-4">
                       {upcomingGames.slice(1, 4).map((game: Game) => (
                         <div key={game.id} className="pb-3 border-b-2 border-slate-100 last:border-0 last:pb-0">
-                          <p className="font-black uppercase text-sm leading-tight">Vs {game.opposingTeam} @ {game.location}</p>
+                          <p className="font-black uppercase text-sm leading-tight">
+                            <span className="text-orange-600 mr-1">{game.isHome ? "(H)" : "(A)"}</span>
+                            Vs {game.opposingTeam} @ {game.location}
+                          </p>
                           <p className="text-xs font-bold text-slate-500 uppercase">
                             {utcToLocalDate(game.date).toLocaleDateString()}
                           </p>

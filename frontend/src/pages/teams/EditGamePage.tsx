@@ -31,7 +31,7 @@ const formSchema = z.object({
   time: z.string().min(1, "Time is required"),
   location: z.string().min(1, "Location is required"),
   opposingTeam: z.string().min(1, "Opposing team is required"),
-  isHome: z.boolean().default(true),
+  isHome: z.boolean(),
 });
 
 export function EditGamePage() {

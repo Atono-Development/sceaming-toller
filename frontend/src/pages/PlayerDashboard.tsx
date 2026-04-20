@@ -179,7 +179,7 @@ const PlayerDashboard: React.FC = () => {
                                     </div>
                                     <div className="text-sm text-muted-foreground">
                                       {formatGameDate(game.date)} at {game.time}{" "}
-                                      • {game.location}
+                                      • {game.location} • {game.isHome ? "Home" : "Away"}
                                     </div>
                                   </div>
                                 </div>
@@ -218,7 +218,7 @@ const PlayerDashboard: React.FC = () => {
                                     </div>
                                     <div className="text-sm text-muted-foreground">
                                       {formatGameDate(game.date)} at {game.time}{" "}
-                                      • {game.location}
+                                      • {game.location} • {game.isHome ? "Home" : "Away"}
                                     </div>
                                   </div>
                                 </div>

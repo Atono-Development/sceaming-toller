@@ -23,6 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
@@ -30,6 +31,7 @@ const formSchema = z.object({
   time: z.string().min(1, "Time is required"),
   location: z.string().min(1, "Location is required"),
   opposingTeam: z.string().min(1, "Opposing team is required"),
+  isHome: z.boolean().default(true),
 });
 
 export function EditGamePage() {
@@ -52,6 +54,7 @@ export function EditGamePage() {
       time: "",
       location: "",
       opposingTeam: "",
+      isHome: true,
     },
   });
 
@@ -62,6 +65,7 @@ export function EditGamePage() {
       time: game.time,
       location: game.location,
       opposingTeam: game.opposingTeam,
+      isHome: game.isHome,
     });
   }
 
@@ -159,6 +163,38 @@ export function EditGamePage() {
                     <FormLabel>Opposing Team</FormLabel>
                     <FormControl>
                       <Input placeholder="Team Name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="isHome"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>Game Type</FormLabel>
+                    <FormControl>
+                      <Tabs
+                        value={field.value ? "home" : "away"}
+                        onValueChange={(value) => field.onChange(value === "home")}
+                        className="w-full"
+                      >
+                        <TabsList className="grid w-full grid-cols-2 h-12 border-2 border-black p-1 bg-slate-100">
+                          <TabsTrigger 
+                            value="home" 
+                            className="font-black uppercase tracking-widest data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none rounded-none transition-all"
+                          >
+                            Home
+                          </TabsTrigger>
+                          <TabsTrigger 
+                            value="away" 
+                            className="font-black uppercase tracking-widest data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-none rounded-none transition-all"
+                          >
+                            Away
+                          </TabsTrigger>
+                        </TabsList>
+                      </Tabs>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

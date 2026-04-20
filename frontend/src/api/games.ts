@@ -7,6 +7,7 @@ export interface Game {
   time: string;
   location: string;
   opposingTeam: string;
+  isHome: boolean;
   finalScore?: number;
   opponentScore?: number;
   status: string;

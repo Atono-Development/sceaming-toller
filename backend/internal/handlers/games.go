@@ -19,6 +19,7 @@ type CreateGameRequest struct {
 	Time         string `json:"time"` // HH:MM
 	Location     string `json:"location"`
 	OpposingTeam string `json:"opposingTeam"`
+	IsHome       bool   `json:"isHome"`
 }
 
 func CreateGame(w http.ResponseWriter, r *http.Request) {
@@ -47,6 +48,7 @@ func CreateGame(w http.ResponseWriter, r *http.Request) {
 		Time:         req.Time,
 		Location:     req.Location,
 		OpposingTeam: req.OpposingTeam,
+		IsHome:       req.IsHome,
 		Status:       "scheduled",
 	}
 
@@ -242,6 +244,7 @@ type UpdateGameRequest struct {
 	Time         string `json:"time,omitempty"`
 	Location     string `json:"location,omitempty"`
 	OpposingTeam string `json:"opposingTeam,omitempty"`
+	IsHome       *bool  `json:"isHome,omitempty"`
 }
 
 func UpdateGame(w http.ResponseWriter, r *http.Request) {
@@ -285,6 +288,9 @@ func UpdateGame(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.OpposingTeam != "" {
 		updates["opposing_team"] = req.OpposingTeam
+	}
+	if req.IsHome != nil {
+		updates["is_home"] = *req.IsHome
 	}
 
 	if result := database.DB.Model(&game).Updates(updates); result.Error != nil {

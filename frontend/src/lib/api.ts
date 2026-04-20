@@ -27,6 +27,7 @@ export interface CreateGameData {
   time: string;
   location: string;
   opposingTeam: string;
+  isHome: boolean;
 }
 
 export const createGame = async (teamId: string, gameData: CreateGameData) => {

@@ -200,7 +200,10 @@ export function GamesPage() {
             {upcomingGames.map((game: any) => (
               <Card key={game.id} className="overflow-visible">
                 <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between space-y-0 p-4 sm:p-6 pb-2">
-                  <CardTitle className="text-xl font-semibold break-words">
+                  <CardTitle className="text-xl font-semibold break-words flex items-center gap-2">
+                    <Badge variant={game.isHome ? "default" : "outline"} className="font-black uppercase tracking-tighter text-[10px] h-5">
+                      {game.isHome ? "Home" : "Away"}
+                    </Badge>
                     vs {game.opposingTeam}
                   </CardTitle>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2">
@@ -361,7 +364,10 @@ export function GamesPage() {
             {pastGames.map((game: any) => (
               <Card key={game.id} className="opacity-75 overflow-visible">
                 <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between space-y-0 p-4 sm:p-6 pb-2">
-                  <CardTitle className="text-xl font-semibold break-words">
+                  <CardTitle className="text-xl font-semibold break-words flex items-center gap-2">
+                    <Badge variant={game.isHome ? "secondary" : "outline"} className="font-black uppercase tracking-tighter text-[10px] h-5 opacity-70">
+                      {game.isHome ? "Home" : "Away"}
+                    </Badge>
                     vs {game.opposingTeam}
                   </CardTitle>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2">

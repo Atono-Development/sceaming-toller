@@ -123,6 +123,7 @@ func main() {
 			// Admin-only routes
 			r.Group(func(r chi.Router) {
 				r.Use(middleware.RequireTeamAdmin)
+				r.Put("/", handlers.UpdateTeam)
 				r.Post("/games", handlers.CreateGame)
 				r.Put("/games/{gameID}", handlers.UpdateGame)
 				r.Delete("/games/{gameID}", handlers.DeleteGame)

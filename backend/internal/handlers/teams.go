@@ -268,6 +268,50 @@ func GetTeam(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(team)
 }
 
+func UpdateTeam(w http.ResponseWriter, r *http.Request) {
+	teamIDStr := chi.URLParam(r, "teamID")
+	teamID, err := uuid.Parse(teamIDStr)
+	if err != nil {
+		http.Error(w, "Invalid team ID", http.StatusBadRequest)
+		return
+	}
+
+	var team models.Team
+	if err := database.DB.First(&team, teamID).Error; err != nil {
+		http.Error(w, "Team not found", http.StatusNotFound)
+		return
+	}
+
+	var updates struct {
+		Name            string `json:"name"`
+		Description     string `json:"description"`
+		League          string `json:"league"`
+		Season          string `json:"season"`
+		WhatsAppGroupID string `json:"whatsAppGroupId"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Update fields if provided
+	if updates.Name != "" {
+		team.Name = updates.Name
+	}
+	team.Description = updates.Description
+	team.League = updates.League
+	team.Season = updates.Season
+	team.WhatsAppGroupID = updates.WhatsAppGroupID
+
+	if err := database.DB.Save(&team).Error; err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(team)
+}
+
 func UploadTeamLogo(w http.ResponseWriter, r *http.Request) {
 	teamIDStr := chi.URLParam(r, "teamID")
 	teamID, err := uuid.Parse(teamIDStr)

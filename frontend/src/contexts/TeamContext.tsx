@@ -11,6 +11,7 @@ export interface Team {
   logoUrl?: string;
   isActive: boolean;
   status: "active" | "pending" | "rejected";
+  whatsAppGroupId?: string;
   membership?: {
     role: string;
     isAdmin: boolean;

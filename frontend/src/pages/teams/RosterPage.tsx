@@ -25,6 +25,7 @@ import { useToast } from "../../hooks/use-toast";
 import { format } from "date-fns";
 import { MobileRosterCard } from "../../components/MobileRosterCard";
 import { LogoUpload } from "../../components/LogoUpload";
+import { WhatsAppConfig } from "../../components/WhatsAppConfig";
 
 export function RosterPage() {
   const { currentTeam, isAdmin } = useTeamContext();
@@ -158,6 +159,7 @@ export function RosterPage() {
       </div>
 
       {isAdmin && <LogoUpload />}
+      {isAdmin && <WhatsAppConfig />}
 
       <div className="rounded-md border hidden md:block">
         <Table>

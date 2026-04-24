@@ -9,6 +9,7 @@ import { TeamSelector } from "../components/TeamSelector";
 import PlayerPreferencesForm from "../components/PlayerPreferencesForm";
 import AttendanceManagement from "../components/AttendanceManagement";
 import LineupViewing from "../components/LineupViewing";
+import WhatsAppConfigForm from "../components/WhatsAppConfigForm";
 import { getTeamGames, type Game } from "../api/games";
 import { useAuth } from "../contexts/AuthContext";
 import { useTeamContext } from "../contexts/TeamContext";
@@ -114,6 +115,9 @@ const PlayerDashboard: React.FC = () => {
         <>
           {/* Preferences Section */}
           <PlayerPreferencesForm teamId={selectedTeam.id} />
+
+          {/* WhatsApp Integration Section (Admin only) */}
+          <WhatsAppConfigForm />
 
           {/* Games Schedule */}
           <Card>

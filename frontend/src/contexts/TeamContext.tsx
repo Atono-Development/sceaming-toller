@@ -16,6 +16,7 @@ export interface Team {
     role: string;
     isAdmin: boolean;
   };
+  whapiTokenSourceUserId?: string;
 }
 
 interface TeamContextType {

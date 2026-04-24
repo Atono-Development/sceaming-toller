@@ -5,29 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"os"
 )
 
 const whapiBaseURL = "https://gate.whapi.cloud"
 
 // WhatsAppService sends messages via the Whapi.Cloud REST API.
 type WhatsAppService struct {
-	token      string
 	httpClient *http.Client
 }
 
-// NewWhatsAppService creates a WhatsAppService from the WHAPI_TOKEN env var.
-// Returns nil (not an error) when the token is absent so callers can treat WA as optional.
+// NewWhatsAppService creates a WhatsAppService.
 func NewWhatsAppService() *WhatsAppService {
-	token := os.Getenv("WHAPI_TOKEN")
-	if token == "" {
-		log.Println("WhatsAppService: WHAPI_TOKEN not set — WhatsApp reminders disabled")
-		return nil
-	}
 	return &WhatsAppService{
-		token:      token,
 		httpClient: &http.Client{},
 	}
 }
@@ -38,9 +28,9 @@ type sendTextMessageRequest struct {
 	Body string `json:"body"`
 }
 
-// SendGroupMessage sends a plain-text message to a WhatsApp group.
+// SendGroupMessage sends a plain-text message to a WhatsApp group using the provided token.
 // groupID is the Whapi chat ID, e.g. "120363xxxxxx@g.us".
-func (s *WhatsAppService) SendGroupMessage(groupID, body string) error {
+func (s *WhatsAppService) SendGroupMessage(token, groupID, body string) error {
 	payload := sendTextMessageRequest{
 		To:   groupID,
 		Body: body,
@@ -57,7 +47,7 @@ func (s *WhatsAppService) SendGroupMessage(groupID, body string) error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+s.token)
+	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {

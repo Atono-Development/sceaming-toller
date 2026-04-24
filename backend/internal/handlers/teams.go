@@ -283,11 +283,12 @@ func UpdateTeam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var updates struct {
-		Name            string `json:"name"`
-		Description     string `json:"description"`
-		League          string `json:"league"`
-		Season          string `json:"season"`
-		WhatsAppGroupID string `json:"whatsAppGroupId"`
+		Name                   string     `json:"name"`
+		Description            string     `json:"description"`
+		League                 string     `json:"league"`
+		Season                 string     `json:"season"`
+		WhatsAppGroupID        string     `json:"whatsAppGroupId"`
+		WhapiTokenSourceUserID *uuid.UUID `json:"whapiTokenSourceUserId"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
@@ -303,6 +304,20 @@ func UpdateTeam(w http.ResponseWriter, r *http.Request) {
 	team.League = updates.League
 	team.Season = updates.Season
 	team.WhatsAppGroupID = updates.WhatsAppGroupID
+
+	// Handle WhapiTokenSourceUserID update
+	// Note: We don't distinguish between "null" and "missing" here for simplicity,
+	// if it's provided in the JSON as a UUID, we update it.
+	if updates.WhapiTokenSourceUserID != nil {
+		// Verify this user is an admin of the team
+		var member models.TeamMember
+		err := database.DB.Where("team_id = ? AND user_id = ? AND is_admin = ?", team.ID, *updates.WhapiTokenSourceUserID, true).First(&member).Error
+		if err != nil {
+			http.Error(w, "Selected user is not an admin of this team", http.StatusForbidden)
+			return
+		}
+		team.WhapiTokenSourceUserID = updates.WhapiTokenSourceUserID
+	}
 
 	if err := database.DB.Save(&team).Error; err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

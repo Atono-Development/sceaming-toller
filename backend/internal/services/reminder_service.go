@@ -9,6 +9,7 @@ import (
 
 	"github.com/liam/screaming-toller/backend/internal/database"
 	"github.com/liam/screaming-toller/backend/internal/models"
+	"github.com/liam/screaming-toller/backend/internal/utils"
 )
 
 type ReminderService struct {
@@ -185,6 +186,30 @@ func (s *ReminderService) sendWhatsAppGroupReminder(game models.Game, gameTime t
 		return
 	}
 
+	if team.WhapiTokenSourceUserID == nil {
+		log.Printf("ReminderService: No WhatsApp API key source configured for team %s, skipping", team.Name)
+		return
+	}
+
+	// Load the source user to get the encrypted token
+	var sourceUser models.User
+	if err := database.DB.First(&sourceUser, "id = ?", team.WhapiTokenSourceUserID).Error; err != nil {
+		log.Printf("ReminderService Error: Could not load token source user for team %s: %v", team.Name, err)
+		return
+	}
+
+	if sourceUser.WhapiToken == "" {
+		log.Printf("ReminderService: Token source user %s has no Whapi token set, skipping", sourceUser.Name)
+		return
+	}
+
+	// Decrypt the token
+	token, err := utils.Decrypt(sourceUser.WhapiToken)
+	if err != nil {
+		log.Printf("ReminderService Error: Failed to decrypt Whapi token for team %s: %v", team.Name, err)
+		return
+	}
+
 	// Collect names of all still-unconfirmed players
 	var attendances []models.Attendance
 	if err := database.DB.Preload("TeamMember.User").
@@ -227,7 +252,7 @@ func (s *ReminderService) sendWhatsAppGroupReminder(game models.Game, gameTime t
 		attendanceURL,
 	)
 
-	if err := s.whatsAppService.SendGroupMessage(team.WhatsAppGroupID, message); err != nil {
+	if err := s.whatsAppService.SendGroupMessage(token, team.WhatsAppGroupID, message); err != nil {
 		log.Printf("ReminderService Error: Failed to send WhatsApp group reminder for game %s: %v", game.ID, err)
 		return
 	}

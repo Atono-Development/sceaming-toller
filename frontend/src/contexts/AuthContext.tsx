@@ -8,6 +8,7 @@ export interface User {
   email: string;
   isSuperAdmin: boolean;
   optOutReminders: boolean;
+  whapiToken?: string;
   auth0Id?: string;
 }
 

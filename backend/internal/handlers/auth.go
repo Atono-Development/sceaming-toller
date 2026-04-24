@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/liam/screaming-toller/backend/internal/database"
 	"github.com/liam/screaming-toller/backend/internal/models"
+	"github.com/liam/screaming-toller/backend/internal/utils"
 	"gorm.io/gorm"
 )
 
@@ -21,8 +22,17 @@ type AuthResponse struct {
 }
 
 type UpdateUserRequest struct {
-	Name           string `json:"name"`
+	Name            string `json:"name"`
 	OptOutReminders bool   `json:"optOutReminders"`
+	WhapiToken      string `json:"whapiToken"`
+}
+
+// maskToken returns a masked version of the token (e.g. "********") if it exists.
+func maskToken(token string) string {
+	if token == "" {
+		return ""
+	}
+	return "********"
 }
 
 func SyncUser(w http.ResponseWriter, r *http.Request) {
@@ -132,6 +142,7 @@ func SyncUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user.WhapiToken = maskToken(user.WhapiToken)
 	json.NewEncoder(w).Encode(AuthResponse{
 		User: user,
 	})
@@ -151,6 +162,7 @@ func GetMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user.WhapiToken = maskToken(user.WhapiToken)
 	json.NewEncoder(w).Encode(user)
 }
 
@@ -180,10 +192,21 @@ func UpdateMe(w http.ResponseWriter, r *http.Request) {
 
 	user.Name = req.Name
 	user.OptOutReminders = req.OptOutReminders
+	
+	if req.WhapiToken != "" && req.WhapiToken != "********" {
+		encrypted, err := utils.Encrypt(req.WhapiToken)
+		if err != nil {
+			http.Error(w, "Failed to encrypt token", http.StatusInternalServerError)
+			return
+		}
+		user.WhapiToken = encrypted
+	}
+
 	if result := database.DB.Save(&user); result.Error != nil {
 		http.Error(w, "Failed to update user", http.StatusInternalServerError)
 		return
 	}
 
+	user.WhapiToken = maskToken(user.WhapiToken)
 	json.NewEncoder(w).Encode(user)
 }

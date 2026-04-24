@@ -17,7 +17,14 @@ export const deleteTeamLogo = async (teamId: string) => {
   return response.data;
 };
 
-export const updateTeam = async (teamId: string, updates: { name?: string; description?: string; league?: string; season?: string; whatsAppGroupId?: string }) => {
+export const updateTeam = async (teamId: string, updates: { 
+  name?: string; 
+  description?: string; 
+  league?: string; 
+  season?: string; 
+  whatsAppGroupId?: string;
+  whapiTokenSourceUserId?: string | null;
+}) => {
   const response = await api.put(`/teams/${teamId}`, updates);
   return response.data;
 };

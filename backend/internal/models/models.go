@@ -14,8 +14,9 @@ type User struct {
 	Email        string    `gorm:"uniqueIndex" json:"email"`
 	IsSuperAdmin bool      `gorm:"default:false" json:"isSuperAdmin"`
 	OptOutReminders bool   `gorm:"default:false" json:"optOutReminders"`
-	CreatedAt    time.Time `json:"createdAt"`
-	UpdatedAt    time.Time `json:"updatedAt"`
+	WhapiToken      string    `json:"whapiToken,omitempty"` // Encrypted
+	CreatedAt       time.Time `json:"createdAt"`
+	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
@@ -35,6 +36,7 @@ type Team struct {
 	Status           string      `gorm:"default:'pending'" json:"status"` // "pending", "active", "rejected"
 	IsActive         bool        `gorm:"default:true" json:"isActive"`
 	WhatsAppGroupID  string      `gorm:"default:''" json:"whatsAppGroupId"` // Whapi group chat ID, e.g. "120363xxx@g.us"
+	WhapiTokenSourceUserID *uuid.UUID `gorm:"type:uuid" json:"whapiTokenSourceUserId,omitempty"`
 	CreatedAt        time.Time   `json:"createdAt"`
 	UpdatedAt        time.Time   `json:"updatedAt"`
 	Membership       *TeamMember `gorm:"-" json:"membership,omitempty"`

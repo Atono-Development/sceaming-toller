@@ -40,7 +40,10 @@ func main() {
 	if err != nil {
 		log.Printf("Warning: Email service not initialized: %v", err)
 	} else {
-		reminderService, err := services.NewReminderService(emailService)
+		// WhatsApp service is optional — nil if WHAPI_TOKEN is not set
+		whatsAppService := services.NewWhatsAppService()
+
+		reminderService, err := services.NewReminderService(emailService, whatsAppService)
 		if err != nil {
 			log.Printf("Warning: Reminder service not initialized: %v", err)
 		} else {

@@ -26,17 +26,18 @@ func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
 }
 
 type Team struct {
-	ID          uuid.UUID   `gorm:"type:uuid;primaryKey" json:"id"`
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	LogoURL     string      `json:"logoUrl"`
-	League      string      `json:"league"`
-	Season      string      `json:"season"`
-	Status      string      `gorm:"default:'pending'" json:"status"` // "pending", "active", "rejected"
-	IsActive    bool        `gorm:"default:true" json:"isActive"`
-	CreatedAt   time.Time   `json:"createdAt"`
-	UpdatedAt   time.Time   `json:"updatedAt"`
-	Membership  *TeamMember `gorm:"-" json:"membership,omitempty"`
+	ID               uuid.UUID   `gorm:"type:uuid;primaryKey" json:"id"`
+	Name             string      `json:"name"`
+	Description      string      `json:"description"`
+	LogoURL          string      `json:"logoUrl"`
+	League           string      `json:"league"`
+	Season           string      `json:"season"`
+	Status           string      `gorm:"default:'pending'" json:"status"` // "pending", "active", "rejected"
+	IsActive         bool        `gorm:"default:true" json:"isActive"`
+	WhatsAppGroupID  string      `gorm:"default:''" json:"whatsAppGroupId"` // Whapi group chat ID, e.g. "120363xxx@g.us"
+	CreatedAt        time.Time   `json:"createdAt"`
+	UpdatedAt        time.Time   `json:"updatedAt"`
+	Membership       *TeamMember `gorm:"-" json:"membership,omitempty"`
 }
 
 func (t *Team) BeforeCreate(tx *gorm.DB) (err error) {
@@ -88,20 +89,21 @@ func (tmp *TeamMemberPreference) BeforeCreate(tx *gorm.DB) (err error) {
 }
 
 type Game struct {
-	ID            uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	TeamID        uuid.UUID `gorm:"type:uuid;index" json:"teamId"`
-	Date          time.Time `gorm:"type:date;index" json:"date"`
-	Time          string    `json:"time"`
-	Location      string    `json:"location"`
-	OpposingTeam  string    `json:"opposingTeam"`
-	IsHome        bool      `gorm:"default:true" json:"isHome"`
-	FinalScore    *int      `json:"finalScore,omitempty"`
-	OpponentScore *int      `json:"opponentScore,omitempty"`
-	Status        string    `gorm:"default:'scheduled'" json:"status"` // "scheduled", "in_progress", "completed", "cancelled"
-	CreatedAt     time.Time `json:"createdAt"`
-	UpdatedAt     time.Time `json:"updatedAt"`
+	ID                       uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
+	TeamID                   uuid.UUID  `gorm:"type:uuid;index" json:"teamId"`
+	Date                     time.Time  `gorm:"type:date;index" json:"date"`
+	Time                     string     `json:"time"`
+	Location                 string     `json:"location"`
+	OpposingTeam             string     `json:"opposingTeam"`
+	IsHome                   bool       `gorm:"default:true" json:"isHome"`
+	FinalScore               *int       `json:"finalScore,omitempty"`
+	OpponentScore            *int       `json:"opponentScore,omitempty"`
+	Status                   string     `gorm:"default:'scheduled'" json:"status"` // "scheduled", "in_progress", "completed", "cancelled"
+	WhatsAppReminderSentAt   *time.Time `json:"whatsAppReminderSentAt,omitempty"` // Set when group WA reminder is sent
+	CreatedAt                time.Time  `json:"createdAt"`
+	UpdatedAt                time.Time  `json:"updatedAt"`
 
-	Team Team `gorm:"foreignKey:TeamID" json:"team,omitempty"`
+	Team         Team          `gorm:"foreignKey:TeamID" json:"team,omitempty"`
 	InningScores []InningScore `gorm:"foreignKey:GameID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"inningScores,omitempty"`
 }
 

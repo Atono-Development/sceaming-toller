@@ -3,18 +3,22 @@ package services
 import (
 	"fmt"
 	"log"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/liam/screaming-toller/backend/internal/database"
 	"github.com/liam/screaming-toller/backend/internal/models"
+	"github.com/liam/screaming-toller/backend/internal/utils"
 )
 
 type ReminderService struct {
-	emailService *EmailService
-	location     *time.Location
+	emailService    *EmailService
+	whatsAppService *WhatsAppService // nil = disabled
+	location        *time.Location
 }
 
-func NewReminderService(emailService *EmailService) (*ReminderService, error) {
+func NewReminderService(emailService *EmailService, whatsAppService *WhatsAppService) (*ReminderService, error) {
 	loc, err := time.LoadLocation("America/Vancouver")
 	if err != nil {
 		log.Printf("Warning: Failed to load America/Vancouver timezone, falling back to local: %v", err)
@@ -22,8 +26,9 @@ func NewReminderService(emailService *EmailService) (*ReminderService, error) {
 	}
 
 	return &ReminderService{
-		emailService: emailService,
-		location:     loc,
+		emailService:    emailService,
+		whatsAppService: whatsAppService,
+		location:        loc,
 	}, nil
 }
 
@@ -151,4 +156,118 @@ func (s *ReminderService) sendRemindersForGame(game models.Game, gameTime time.T
 		database.DB.Save(&att)
 		log.Printf("ReminderService: Reminder sent to %s", user.Email)
 	}
+
+	// After all individual emails, send a single WhatsApp group reminder
+	s.sendWhatsAppGroupReminder(game, gameTime)
+}
+
+// sendWhatsAppGroupReminder posts one message to the team's WhatsApp group listing
+// all 'maybe' players (by name) for the given game. Idempotent — skips if already sent.
+func (s *ReminderService) sendWhatsAppGroupReminder(game models.Game, gameTime time.Time) {
+	if s.whatsAppService == nil {
+		return
+	}
+
+	// Already sent for this game?
+	if game.WhatsAppReminderSentAt != nil {
+		log.Printf("ReminderService: WhatsApp reminder already sent for game %s, skipping", game.ID)
+		return
+	}
+
+	// Load the team to get its WhatsApp group ID
+	var team models.Team
+	if err := database.DB.First(&team, "id = ?", game.TeamID).Error; err != nil {
+		log.Printf("ReminderService Error: Could not load team for game %s: %v", game.ID, err)
+		return
+	}
+
+	if team.WhatsAppGroupID == "" {
+		log.Printf("ReminderService: No WhatsApp group configured for team %s, skipping", team.Name)
+		return
+	}
+
+	if team.WhapiTokenSourceUserID == nil {
+		log.Printf("ReminderService: No WhatsApp API key source configured for team %s, skipping", team.Name)
+		return
+	}
+
+	// Load the source user to get the encrypted token
+	var sourceUser models.User
+	if err := database.DB.First(&sourceUser, "id = ?", team.WhapiTokenSourceUserID).Error; err != nil {
+		log.Printf("ReminderService Error: Could not load token source user for team %s: %v", team.Name, err)
+		return
+	}
+
+	if sourceUser.WhapiToken == "" {
+		log.Printf("ReminderService: Token source user %s has no Whapi token set, skipping", sourceUser.Name)
+		return
+	}
+
+	// Decrypt the token
+	token, err := utils.Decrypt(sourceUser.WhapiToken)
+	if err != nil {
+		log.Printf("ReminderService Error: Failed to decrypt Whapi token for team %s: %v", team.Name, err)
+		return
+	}
+
+	// Collect names of all still-unconfirmed players
+	var attendances []models.Attendance
+	if err := database.DB.Preload("TeamMember.User").
+		Where("game_id = ? AND status = ?", game.ID, "maybe").
+		Find(&attendances).Error; err != nil {
+		log.Printf("ReminderService Error: Failed to fetch attendances for WA reminder (game %s): %v", game.ID, err)
+		return
+	}
+
+	if len(attendances) == 0 {
+		log.Printf("ReminderService: No 'maybe' players for WA reminder (game %s)", game.ID)
+		return
+	}
+
+	var names []string
+	for _, att := range attendances {
+		if att.TeamMember.User.OptOutReminders {
+			continue
+		}
+		names = append(names, att.TeamMember.User.Name)
+	}
+
+	if len(names) == 0 {
+		log.Printf("ReminderService: All 'maybe' players opted out, skipping WA reminder (game %s)", game.ID)
+		return
+	}
+
+	gameDateStr := gameTime.Format("Monday, Jan 2")
+	gameTimeStr := gameTime.Format("3:04 PM")
+	attendanceURL := fmt.Sprintf("%s/teams/%s/games", getAppURL(), team.ID.String())
+
+	message := fmt.Sprintf(
+		"⚾ *Attendance Reminder — %s vs %s*\n📅 %s at %s\n📍 %s\n\nThe following players haven't confirmed yet:\n%s\n\nPlease update your attendance: %s",
+		team.Name,
+		game.OpposingTeam,
+		gameDateStr,
+		gameTimeStr,
+		game.Location,
+		"• "+strings.Join(names, "\n• "),
+		attendanceURL,
+	)
+
+	if err := s.whatsAppService.SendGroupMessage(token, team.WhatsAppGroupID, message); err != nil {
+		log.Printf("ReminderService Error: Failed to send WhatsApp group reminder for game %s: %v", game.ID, err)
+		return
+	}
+
+	// Mark game as WA-reminded
+	now := time.Now()
+	game.WhatsAppReminderSentAt = &now
+	database.DB.Save(&game)
+	log.Printf("ReminderService: WhatsApp group reminder sent for game %s to group %s (%d players)", game.ID, team.WhatsAppGroupID, len(names))
+}
+
+// getAppURL returns the APP_URL env var with a safe fallback.
+func getAppURL() string {
+	if url := os.Getenv("APP_URL"); url != "" {
+		return url
+	}
+	return "http://localhost:5173"
 }

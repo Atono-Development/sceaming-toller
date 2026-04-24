@@ -10,16 +10,14 @@ import { useToast } from "../hooks/use-toast";
 import { MessageSquare, Save } from "lucide-react";
 
 export function WhatsAppConfig() {
-  const { currentTeam } = useTeamContext();
+  const { currentTeam, refreshTeams } = useTeamContext();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [groupId, setGroupId] = React.useState(currentTeam?.whatsAppGroupId || "");
 
-  // Update local state when currentTeam changes (e.g. initial load)
+  // Update local state when currentTeam changes (e.g. initial load or after refresh)
   React.useEffect(() => {
-    if (currentTeam?.whatsAppGroupId) {
-      setGroupId(currentTeam.whatsAppGroupId);
-    }
+    setGroupId(currentTeam?.whatsAppGroupId || "");
   }, [currentTeam?.whatsAppGroupId]);
 
   const mutation = useMutation({
@@ -27,9 +25,9 @@ export function WhatsAppConfig() {
       if (!currentTeam) throw new Error("No team selected");
       return updateTeam(currentTeam.id, { whatsAppGroupId: newGroupId });
     },
-    onSuccess: (updatedTeam) => {
+    onSuccess: () => {
+      refreshTeams();
       queryClient.invalidateQueries({ queryKey: ["teams"] });
-      // Also update the local context if needed, but invalidating queries usually handles it
       toast({
         title: "Settings updated",
         description: "WhatsApp Group ID has been saved.",

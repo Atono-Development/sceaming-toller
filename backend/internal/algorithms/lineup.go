@@ -56,17 +56,21 @@ func GenerateBattingOrder(gameID uuid.UUID) ([]models.BattingOrder, error) {
 		pitcherIDs[i] = p.ID
 	}
 
-	// 5. Alternate M-F with random starting gender
+	// 5. Alternate M-F, always passing the majority gender first so the
+	// minority gender is evenly distributed (avoids >2 consecutive same-gender).
 	var positions []BattingPosition
-	// Randomly decide which gender starts the batting order
-	if rand.Intn(2) == 0 && len(males) >= len(females) {
+	nM, nF := len(males), len(females)
+	switch {
+	case nM > nF:
 		positions = alternateGenders(males, females)
-	} else if len(males) >= len(females) {
+	case nF > nM:
 		positions = alternateGenders(females, males)
-	} else if rand.Intn(2) == 0 {
-		positions = alternateGenders(females, males)
-	} else {
-		positions = alternateGenders(males, females)
+	default: // equal – random start adds variety
+		if rand.Intn(2) == 0 {
+			positions = alternateGenders(males, females)
+		} else {
+			positions = alternateGenders(females, males)
+		}
 	}
 
 	// 6. Space out pitchers
@@ -118,27 +122,65 @@ func containsIgnoreCase(s, substr string) bool {
 	return strings.Contains(s, substr)
 }
 
-func alternateGenders(primary, secondary []models.TeamMember) []BattingPosition {
+// alternateGenders builds a batting order from majority and minority gender slices.
+// majority must have >= len(minority) players.
+//
+// Offset 0-1: simple alternation – produces at most one same-gender pair at the
+// cyclic wrap-around (position N → position 1).
+//
+// Offset 2+: minority players are placed at evenly-spaced slots using
+// Bresenham-style integer distribution so that no run of the majority gender
+// ever exceeds 2 (the mathematical minimum for the given counts).
+func alternateGenders(majority, minority []models.TeamMember) []BattingPosition {
+	nMaj := len(majority)
+	nMin := len(minority)
+	total := nMaj + nMin
+	if total == 0 {
+		return nil
+	}
+
 	var positions []BattingPosition
-	i, j := 0, 0
-	
-	for i < len(primary) || j < len(secondary) {
-		if i < len(primary) {
-			positions = append(positions, BattingPosition{
-				TeamMemberID: primary[i].ID,
-				Position:     len(positions) + 1,
-			})
-			i++
+
+	if nMaj-nMin <= 1 {
+		// Simple alternation: majority first, at most one same-gender pair at wrap.
+		i, j := 0, 0
+		for i < nMaj || j < nMin {
+			if i < nMaj {
+				positions = append(positions, BattingPosition{
+					TeamMemberID: majority[i].ID,
+					Position:     len(positions) + 1,
+				})
+				i++
+			}
+			if j < nMin {
+				positions = append(positions, BattingPosition{
+					TeamMemberID: minority[j].ID,
+					Position:     len(positions) + 1,
+				})
+				j++
+			}
 		}
-		if j < len(secondary) {
+		return positions
+	}
+
+	// offset >= 2: recycle minority players to maintain strict alternation.
+	// Structure: Maj[0], Min[0], Maj[1], Min[1], ..., Maj[nMaj-1]
+	// Minority players cycle (mod nMin) through the (nMaj-1) slots between
+	// majority players. Total entries = 2*nMaj-1.
+	// Cyclic wrap: Maj[last] → Maj[0] = exactly one same-gender pair allowed.
+	for i := 0; i < nMaj; i++ {
+		positions = append(positions, BattingPosition{
+			TeamMemberID: majority[i].ID,
+			Position:     len(positions) + 1,
+		})
+		if i < nMaj-1 {
 			positions = append(positions, BattingPosition{
-				TeamMemberID: secondary[j].ID,
+				TeamMemberID: minority[i%nMin].ID,
 				Position:     len(positions) + 1,
 			})
-			j++
 		}
 	}
-	
+
 	return positions
 }
 

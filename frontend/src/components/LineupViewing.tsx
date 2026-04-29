@@ -10,7 +10,6 @@ import {
   getFieldingLineup,
   generateCompleteFieldingLineup,
   generateBattingOrder,
-  updateBattingOrder,
   type BattingOrder,
   type BattingOrderPool,
   type FieldingLineup,

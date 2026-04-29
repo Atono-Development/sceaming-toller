@@ -1,5 +1,5 @@
 import React from "react";
-import { type BattingOrder, type Game } from "@/api/games";
+import { type BattingOrder, type Game, type BattingOrderPool } from "@/api/games";
 import { utcToLocalDate } from "@/utils/dateUtils";
 
 interface Player {
@@ -31,7 +31,7 @@ const PrintableLineup: React.FC<PrintableLineupProps> = ({
   const players: Player[] = battingOrder
     .filter((p) => !p.isPlaceholder)
     .map((player) => ({
-      id: player.teamMemberId,
+      id: player.teamMemberId || "",
       name: player.teamMember?.user?.name || "Unknown Player",
       gender: player.teamMember?.gender === "M" ? "Male" : "Female",
       isPitcher:

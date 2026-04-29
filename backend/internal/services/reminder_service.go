@@ -91,6 +91,7 @@ func (s *ReminderService) ProcessUpcomingReminders() {
 		// This handles the 4-hour ticker frequency much better than a tight window.
 		reminderWindowStart := gameTimePDT.Add(-26 * time.Hour)
 		reminderWindowEnd := gameTimePDT.Add(-2 * time.Hour)
+		log.Printf("ReminderService: Game %s (Time: %v, Window: %v to %v, Now: %v)", game.ID, gameTimePDT, reminderWindowStart, reminderWindowEnd, now)
 
 		if now.After(reminderWindowStart) && now.Before(reminderWindowEnd) {
 			s.sendRemindersForGame(game, gameTimePDT)

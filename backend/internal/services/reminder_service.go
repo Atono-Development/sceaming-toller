@@ -53,9 +53,13 @@ func (s *ReminderService) StartScheduler() {
 
 	// 3. Periodic check for safety (e.g., every 4 hours) to catch new games or missed windows
 	go func() {
-		ticker := time.NewTicker(4 * time.Hour)
-		for range ticker.C {
+		const interval = 4 * time.Hour
+		ticker := time.NewTicker(interval)
+		log.Printf("ReminderService: Periodic check started. Next run in %v at %v", interval, time.Now().Add(interval).In(s.location).Format("15:04:05"))
+		
+		for t := range ticker.C {
 			s.ProcessUpcomingReminders()
+			log.Printf("ReminderService: Periodic check finished. Next run in %v at %v", interval, t.Add(interval).In(s.location).Format("15:04:05"))
 		}
 	}()
 }
@@ -243,7 +247,7 @@ func (s *ReminderService) sendWhatsAppGroupReminder(game models.Game, gameTime t
 	attendanceURL := fmt.Sprintf("%s/teams/%s/games", getAppURL(), team.ID.String())
 
 	message := fmt.Sprintf(
-		"⚾ *Attendance Reminder — %s vs %s*\n📅 %s at %s\n📍 %s\n\nThe following players haven't confirmed yet:\n%s\n\nPlease update your attendance: %s",
+		"🥎 *Attendance Reminder — %s vs %s*\n📅 %s at %s\n📍 %s\n\nThe following players haven't confirmed yet:\n%s\n\nPlease update your attendance: %s",
 		team.Name,
 		game.OpposingTeam,
 		gameDateStr,

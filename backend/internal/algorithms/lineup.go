@@ -13,12 +13,19 @@ import (
 )
 
 type BattingPosition struct {
-	TeamMemberID uuid.UUID
-	Position     int
+	TeamMemberID      uuid.UUID
+	Position          int
+	IsPlaceholder     bool
+	PlaceholderGender string
+}
+
+type GeneratedBattingOrder struct {
+	BattingOrder []models.BattingOrder
+	MinorityPool []models.BattingOrderPool
 }
 
 // GenerateBattingOrder creates a batting order based on attendance and gender balance rules
-func GenerateBattingOrder(gameID uuid.UUID) ([]models.BattingOrder, error) {
+func GenerateBattingOrder(gameID uuid.UUID) (*GeneratedBattingOrder, error) {
 	// 1. Get attendance for this game
 	var attendance []models.Attendance
 	if result := database.DB.Where("game_id = ? AND status = ?", gameID, "going").
@@ -56,17 +63,21 @@ func GenerateBattingOrder(gameID uuid.UUID) ([]models.BattingOrder, error) {
 		pitcherIDs[i] = p.ID
 	}
 
-	// 5. Alternate M-F with random starting gender
+	// 5. Alternate M-F, always passing the majority gender first so the
+	// minority gender is evenly distributed (avoids >2 consecutive same-gender).
 	var positions []BattingPosition
-	// Randomly decide which gender starts the batting order
-	if rand.Intn(2) == 0 && len(males) >= len(females) {
+	nM, nF := len(males), len(females)
+	switch {
+	case nM > nF:
 		positions = alternateGenders(males, females)
-	} else if len(males) >= len(females) {
+	case nF > nM:
 		positions = alternateGenders(females, males)
-	} else if rand.Intn(2) == 0 {
-		positions = alternateGenders(females, males)
-	} else {
-		positions = alternateGenders(males, females)
+	default: // equal – random start adds variety
+		if rand.Intn(2) == 0 {
+			positions = alternateGenders(males, females)
+		} else {
+			positions = alternateGenders(females, males)
+		}
 	}
 
 	// 6. Space out pitchers
@@ -75,17 +86,46 @@ func GenerateBattingOrder(gameID uuid.UUID) ([]models.BattingOrder, error) {
 	}
 
 	// 7. Convert to BattingOrder models
-	result := make([]models.BattingOrder, len(positions))
+	battingOrder := make([]models.BattingOrder, len(positions))
 	for i, pos := range positions {
-		result[i] = models.BattingOrder{
-			GameID:          gameID,
-			TeamMemberID:    pos.TeamMemberID,
-			BattingPosition: pos.Position,
-			IsGenerated:     true,
+		var tmID *uuid.UUID
+		if !pos.IsPlaceholder && pos.TeamMemberID != uuid.Nil {
+			id := pos.TeamMemberID
+			tmID = &id
+		}
+
+		battingOrder[i] = models.BattingOrder{
+			GameID:            gameID,
+			TeamMemberID:      tmID,
+			BattingPosition:   pos.Position,
+			IsGenerated:       true,
+			IsPlaceholder:     pos.IsPlaceholder,
+			PlaceholderGender: pos.PlaceholderGender,
 		}
 	}
 
-	return result, nil
+	// 8. Create minority pool if needed
+	var minorityPool []models.BattingOrderPool
+	minority := females
+	if nM < nF {
+		minority = males
+	}
+
+	if (nM > nF && nM-nF >= 2) || (nF > nM && nF-nM >= 2) {
+		minorityPool = make([]models.BattingOrderPool, len(minority))
+		for i, member := range minority {
+			minorityPool[i] = models.BattingOrderPool{
+				GameID:       gameID,
+				TeamMemberID: member.ID,
+				PoolPosition: i + 1,
+			}
+		}
+	}
+
+	return &GeneratedBattingOrder{
+		BattingOrder: battingOrder,
+		MinorityPool: minorityPool,
+	}, nil
 }
 
 func filterByGender(members []models.TeamMember, gender string) []models.TeamMember {
@@ -118,27 +158,69 @@ func containsIgnoreCase(s, substr string) bool {
 	return strings.Contains(s, substr)
 }
 
-func alternateGenders(primary, secondary []models.TeamMember) []BattingPosition {
+// alternateGenders builds a batting order from majority and minority gender slices.
+// majority must have >= len(minority) players.
+//
+// Offset 0-1: simple alternation – produces at most one same-gender pair at the
+// cyclic wrap-around (position N → position 1).
+//
+// Offset 2+: uses placeholders for the minority gender to maintain strict alternation
+// without recycling players into an excessively long order.
+func alternateGenders(majority, minority []models.TeamMember) []BattingPosition {
+	nMaj := len(majority)
+	nMin := len(minority)
+	total := nMaj + nMin
+	if total == 0 {
+		return nil
+	}
+
 	var positions []BattingPosition
-	i, j := 0, 0
-	
-	for i < len(primary) || j < len(secondary) {
-		if i < len(primary) {
-			positions = append(positions, BattingPosition{
-				TeamMemberID: primary[i].ID,
-				Position:     len(positions) + 1,
-			})
-			i++
+
+	if nMaj-nMin <= 1 {
+		// Simple alternation: majority first, at most one same-gender pair at wrap.
+		i, j := 0, 0
+		for i < nMaj || j < nMin {
+			if i < nMaj {
+				positions = append(positions, BattingPosition{
+					TeamMemberID: majority[i].ID,
+					Position:     len(positions) + 1,
+				})
+				i++
+			}
+			if j < nMin {
+				positions = append(positions, BattingPosition{
+					TeamMemberID: minority[j].ID,
+					Position:     len(positions) + 1,
+				})
+				j++
+			}
 		}
-		if j < len(secondary) {
+		return positions
+	}
+
+	// offset >= 2: Use placeholders for the minority gender.
+	// Structure: Maj[0], [Placeholder], Maj[1], [Placeholder], ..., Maj[nMaj-1]
+	// Total entries = 2*nMaj-1.
+	// Cyclic wrap: Maj[last] → Maj[0] = exactly one same-gender pair allowed.
+	placeholderGender := ""
+	if len(minority) > 0 {
+		placeholderGender = minority[0].Gender
+	}
+
+	for i := 0; i < nMaj; i++ {
+		positions = append(positions, BattingPosition{
+			TeamMemberID: majority[i].ID,
+			Position:     len(positions) + 1,
+		})
+		if i < nMaj-1 {
 			positions = append(positions, BattingPosition{
-				TeamMemberID: secondary[j].ID,
-				Position:     len(positions) + 1,
+				IsPlaceholder:     true,
+				PlaceholderGender: placeholderGender,
+				Position:          len(positions) + 1,
 			})
-			j++
 		}
 	}
-	
+
 	return positions
 }
 

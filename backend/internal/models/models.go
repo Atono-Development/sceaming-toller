@@ -136,12 +136,16 @@ func (a *Attendance) BeforeCreate(tx *gorm.DB) (err error) {
 }
 
 type BattingOrder struct {
-	ID              uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	GameID          uuid.UUID `gorm:"type:uuid;index" json:"gameId"`
-	TeamMemberID    uuid.UUID `gorm:"type:uuid" json:"teamMemberId"`
-	BattingPosition int       `json:"battingPosition"`
-	IsGenerated     bool      `json:"isGenerated"`
-	CreatedAt       time.Time `json:"createdAt"`
+	ID                uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	GameID            uuid.UUID `gorm:"type:uuid;index" json:"gameId"`
+	TeamMemberID      *uuid.UUID `gorm:"type:uuid" json:"teamMemberId"`
+	BattingPosition   int       `json:"battingPosition"`
+	IsGenerated       bool      `json:"isGenerated"`
+	// IsPlaceholder marks a slot reserved for the minority gender pool.
+	// When true, TeamMemberID is nil and PlaceholderGender indicates which gender.
+	IsPlaceholder     bool      `gorm:"default:false" json:"isPlaceholder"`
+	PlaceholderGender string    `gorm:"default:''" json:"placeholderGender"`
+	CreatedAt         time.Time `json:"createdAt"`
 
 	Game       Game       `gorm:"foreignKey:GameID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"game,omitempty"`
 	TeamMember TeamMember `gorm:"foreignKey:TeamMemberID" json:"teamMember,omitempty"`
@@ -150,6 +154,26 @@ type BattingOrder struct {
 func (bo *BattingOrder) BeforeCreate(tx *gorm.DB) (err error) {
 	if bo.ID == uuid.Nil {
 		bo.ID = uuid.New()
+	}
+	return
+}
+
+// BattingOrderPool stores the ordered list of minority-gender players that
+// cycle through the placeholder slots in the batting order.
+type BattingOrderPool struct {
+	ID           uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
+	GameID       uuid.UUID  `gorm:"type:uuid;index" json:"gameId"`
+	TeamMemberID uuid.UUID  `gorm:"type:uuid" json:"teamMemberId"`
+	PoolPosition int        `json:"poolPosition"` // 1-based order within the pool
+	CreatedAt    time.Time  `json:"createdAt"`
+
+	Game       Game       `gorm:"foreignKey:GameID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"game,omitempty"`
+	TeamMember TeamMember `gorm:"foreignKey:TeamMemberID" json:"teamMember,omitempty"`
+}
+
+func (bop *BattingOrderPool) BeforeCreate(tx *gorm.DB) (err error) {
+	if bop.ID == uuid.Nil {
+		bop.ID = uuid.New()
 	}
 	return
 }

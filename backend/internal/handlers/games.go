@@ -213,14 +213,23 @@ func GetBattingOrder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid game ID", http.StatusBadRequest)
 		return
 	}
-
+	
 	var battingOrder []models.BattingOrder
 	if result := database.DB.Preload("TeamMember.User").Where("game_id = ?", gameID).Order("batting_position").Find(&battingOrder); result.Error != nil {
 		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	json.NewEncoder(w).Encode(battingOrder)
+	var minorityPool []models.BattingOrderPool
+	if result := database.DB.Preload("TeamMember.User").Where("game_id = ?", gameID).Order("pool_position").Find(&minorityPool); result.Error != nil {
+		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(BattingOrderResponse{
+		BattingOrder: battingOrder,
+		MinorityPool: minorityPool,
+	})
 }
 
 func GetFieldingLineup(w http.ResponseWriter, r *http.Request) {
@@ -705,7 +714,13 @@ func DeleteFieldingLineup(w http.ResponseWriter, r *http.Request) {
 }
 
 type BattingOrderUpdateRequest struct {
-	BattingOrder []models.BattingOrder `json:"battingOrder"`
+	BattingOrder []models.BattingOrder     `json:"battingOrder"`
+	MinorityPool []models.BattingOrderPool `json:"minorityPool"`
+}
+
+type BattingOrderResponse struct {
+	BattingOrder []models.BattingOrder     `json:"battingOrder"`
+	MinorityPool []models.BattingOrderPool `json:"minorityPool"`
 }
 
 func GenerateBattingOrder(w http.ResponseWriter, r *http.Request) {
@@ -728,28 +743,43 @@ func GenerateBattingOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call algorithm to generate batting order
-	battingOrder, err := algorithms.GenerateBattingOrder(gameID)
+	generated, err := algorithms.GenerateBattingOrder(gameID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Delete existing batting order for this game
-	if result := database.DB.Where("game_id = ?", gameID).Delete(&models.BattingOrder{}); result.Error != nil {
-		http.Error(w, "Failed to clear existing batting order", http.StatusInternalServerError)
-		return
-	}
-
-	// Create new batting order entries
-	for _, order := range battingOrder {
-		if result := database.DB.Create(&order); result.Error != nil {
-			http.Error(w, "Failed to save batting order", http.StatusInternalServerError)
-			return
+	// Delete existing batting order and pool for this game
+	database.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("game_id = ?", gameID).Delete(&models.BattingOrder{}).Error; err != nil {
+			return err
 		}
-	}
+		if err := tx.Where("game_id = ?", gameID).Delete(&models.BattingOrderPool{}).Error; err != nil {
+			return err
+		}
+
+		// Create new batting order entries
+		for _, order := range generated.BattingOrder {
+			if err := tx.Create(&order).Error; err != nil {
+				return err
+			}
+		}
+
+		// Create new minority pool entries
+		for _, poolItem := range generated.MinorityPool {
+			if err := tx.Create(&poolItem).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(battingOrder)
+	json.NewEncoder(w).Encode(BattingOrderResponse{
+		BattingOrder: generated.BattingOrder,
+		MinorityPool: generated.MinorityPool,
+	})
 }
 
 func UpdateBattingOrder(w http.ResponseWriter, r *http.Request) {
@@ -777,23 +807,37 @@ func UpdateBattingOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delete existing batting order for this game
-	if result := database.DB.Where("game_id = ?", gameID).Delete(&models.BattingOrder{}); result.Error != nil {
-		http.Error(w, "Failed to clear existing batting order", http.StatusInternalServerError)
-		return
-	}
-
-	// Create new batting order entries
-	for _, order := range req.BattingOrder {
-		order.GameID = gameID
-		order.ID = uuid.New()
-		order.CreatedAt = time.Now()
-		
-		if result := database.DB.Create(&order); result.Error != nil {
-			http.Error(w, "Failed to save batting order", http.StatusInternalServerError)
-			return
+	// Delete existing batting order and pool for this game
+	database.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("game_id = ?", gameID).Delete(&models.BattingOrder{}).Error; err != nil {
+			return err
 		}
-	}
+		if err := tx.Where("game_id = ?", gameID).Delete(&models.BattingOrderPool{}).Error; err != nil {
+			return err
+		}
+
+		// Create new batting order entries
+		for _, order := range req.BattingOrder {
+			order.GameID = gameID
+			order.ID = uuid.New()
+			order.CreatedAt = time.Now()
+			if err := tx.Create(&order).Error; err != nil {
+				return err
+			}
+		}
+
+		// Create new minority pool entries
+		for _, poolItem := range req.MinorityPool {
+			poolItem.GameID = gameID
+			poolItem.ID = uuid.New()
+			poolItem.CreatedAt = time.Now()
+			if err := tx.Create(&poolItem).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})

@@ -13,12 +13,19 @@ import (
 )
 
 type BattingPosition struct {
-	TeamMemberID uuid.UUID
-	Position     int
+	TeamMemberID      uuid.UUID
+	Position          int
+	IsPlaceholder     bool
+	PlaceholderGender string
+}
+
+type GeneratedBattingOrder struct {
+	BattingOrder []models.BattingOrder
+	MinorityPool []models.BattingOrderPool
 }
 
 // GenerateBattingOrder creates a batting order based on attendance and gender balance rules
-func GenerateBattingOrder(gameID uuid.UUID) ([]models.BattingOrder, error) {
+func GenerateBattingOrder(gameID uuid.UUID) (*GeneratedBattingOrder, error) {
 	// 1. Get attendance for this game
 	var attendance []models.Attendance
 	if result := database.DB.Where("game_id = ? AND status = ?", gameID, "going").
@@ -79,17 +86,46 @@ func GenerateBattingOrder(gameID uuid.UUID) ([]models.BattingOrder, error) {
 	}
 
 	// 7. Convert to BattingOrder models
-	result := make([]models.BattingOrder, len(positions))
+	battingOrder := make([]models.BattingOrder, len(positions))
 	for i, pos := range positions {
-		result[i] = models.BattingOrder{
-			GameID:          gameID,
-			TeamMemberID:    pos.TeamMemberID,
-			BattingPosition: pos.Position,
-			IsGenerated:     true,
+		var tmID *uuid.UUID
+		if !pos.IsPlaceholder && pos.TeamMemberID != uuid.Nil {
+			id := pos.TeamMemberID
+			tmID = &id
+		}
+
+		battingOrder[i] = models.BattingOrder{
+			GameID:            gameID,
+			TeamMemberID:      tmID,
+			BattingPosition:   pos.Position,
+			IsGenerated:       true,
+			IsPlaceholder:     pos.IsPlaceholder,
+			PlaceholderGender: pos.PlaceholderGender,
 		}
 	}
 
-	return result, nil
+	// 8. Create minority pool if needed
+	var minorityPool []models.BattingOrderPool
+	minority := females
+	if nM < nF {
+		minority = males
+	}
+
+	if (nM > nF && nM-nF >= 2) || (nF > nM && nF-nM >= 2) {
+		minorityPool = make([]models.BattingOrderPool, len(minority))
+		for i, member := range minority {
+			minorityPool[i] = models.BattingOrderPool{
+				GameID:       gameID,
+				TeamMemberID: member.ID,
+				PoolPosition: i + 1,
+			}
+		}
+	}
+
+	return &GeneratedBattingOrder{
+		BattingOrder: battingOrder,
+		MinorityPool: minorityPool,
+	}, nil
 }
 
 func filterByGender(members []models.TeamMember, gender string) []models.TeamMember {
@@ -128,9 +164,8 @@ func containsIgnoreCase(s, substr string) bool {
 // Offset 0-1: simple alternation – produces at most one same-gender pair at the
 // cyclic wrap-around (position N → position 1).
 //
-// Offset 2+: minority players are placed at evenly-spaced slots using
-// Bresenham-style integer distribution so that no run of the majority gender
-// ever exceeds 2 (the mathematical minimum for the given counts).
+// Offset 2+: uses placeholders for the minority gender to maintain strict alternation
+// without recycling players into an excessively long order.
 func alternateGenders(majority, minority []models.TeamMember) []BattingPosition {
 	nMaj := len(majority)
 	nMin := len(minority)
@@ -163,11 +198,15 @@ func alternateGenders(majority, minority []models.TeamMember) []BattingPosition 
 		return positions
 	}
 
-	// offset >= 2: recycle minority players to maintain strict alternation.
-	// Structure: Maj[0], Min[0], Maj[1], Min[1], ..., Maj[nMaj-1]
-	// Minority players cycle (mod nMin) through the (nMaj-1) slots between
-	// majority players. Total entries = 2*nMaj-1.
+	// offset >= 2: Use placeholders for the minority gender.
+	// Structure: Maj[0], [Placeholder], Maj[1], [Placeholder], ..., Maj[nMaj-1]
+	// Total entries = 2*nMaj-1.
 	// Cyclic wrap: Maj[last] → Maj[0] = exactly one same-gender pair allowed.
+	placeholderGender := ""
+	if len(minority) > 0 {
+		placeholderGender = minority[0].Gender
+	}
+
 	for i := 0; i < nMaj; i++ {
 		positions = append(positions, BattingPosition{
 			TeamMemberID: majority[i].ID,
@@ -175,8 +214,9 @@ func alternateGenders(majority, minority []models.TeamMember) []BattingPosition 
 		})
 		if i < nMaj-1 {
 			positions = append(positions, BattingPosition{
-				TeamMemberID: minority[i%nMin].ID,
-				Position:     len(positions) + 1,
+				IsPlaceholder:     true,
+				PlaceholderGender: placeholderGender,
+				Position:          len(positions) + 1,
 			})
 		}
 	}

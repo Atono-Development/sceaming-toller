@@ -10,7 +10,9 @@ import {
   getFieldingLineup,
   generateCompleteFieldingLineup,
   generateBattingOrder,
+  updateBattingOrder,
   type BattingOrder,
+  type BattingOrderPool,
   type FieldingLineup,
   type Game,
 } from "../api/games";
@@ -24,18 +26,20 @@ interface LineupViewingProps {
 
 const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
   const [battingOrder, setBattingOrder] = useState<BattingOrder[]>([]);
+  const [minorityPool, setMinorityPool] = useState<BattingOrderPool[]>([]);
   const [fieldingLineup, setFieldingLineup] = useState<FieldingLineup[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   const loadLineups = useCallback(async () => {
     try {
-      const [batting, fielding] = await Promise.all([
+      const [battingData, fielding] = await Promise.all([
         getBattingOrder(teamId, game.id),
         getFieldingLineup(teamId, game.id),
       ]);
 
-      setBattingOrder(batting);
+      setBattingOrder(battingData.battingOrder);
+      setMinorityPool(battingData.minorityPool);
       setFieldingLineup(fielding);
     } catch {
       toast({
@@ -202,24 +206,40 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
                 No batting order has been set for this game yet.
               </div>
             ) : (
+            <div className="space-y-6">
               <div className="space-y-2">
                 {battingOrder.map((player) => (
                   <div
                     key={player.id}
-                    className="flex items-center justify-between p-3 rounded border"
+                    className={`flex items-center justify-between p-3 rounded border ${
+                      player.isPlaceholder ? "bg-muted/30 border-dashed" : ""
+                    }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
                         {player.battingPosition}
                       </div>
-                      <span className="font-medium">
-                        {player.teamMember?.user?.name || "Unknown Player"}
-                      </span>
+                      {player.isPlaceholder ? (
+                        <span className="font-medium italic text-muted-foreground">
+                          — {player.placeholderGender === "M" ? "Male" : "Female"} slot —
+                        </span>
+                      ) : (
+                        <span className="font-medium">
+                          {player.teamMember?.user?.name || "Unknown Player"}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       {(() => {
+                        if (player.isPlaceholder) {
+                          return (
+                            <Badge variant="secondary">
+                              {player.placeholderGender === "M" ? "Male" : "Female"} Pool
+                            </Badge>
+                          );
+                        }
                         const isPitcher = player.teamMember?.role
-                          .split(",")
+                          ?.split(",")
                           .map((role) => role.trim().toLowerCase())
                           .includes("pitcher");
 
@@ -240,6 +260,35 @@ const LineupViewing: React.FC<LineupViewingProps> = ({ teamId, game }) => {
                   </div>
                 ))}
               </div>
+
+              {minorityPool.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                    {minorityPool[0].teamMember?.gender === "M" ? "Male" : "Female"} Pool Rotation
+                  </h4>
+                  <div className="bg-muted/20 p-4 rounded-lg border border-dashed">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {minorityPool.map((player) => (
+                        <div
+                          key={player.id}
+                          className="flex items-center gap-3 p-2 rounded border bg-white"
+                        >
+                          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-secondary text-secondary-foreground font-bold text-xs">
+                            {player.poolPosition}
+                          </div>
+                          <span className="text-sm font-medium">
+                            {player.teamMember?.user?.name || "Unknown Player"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-3 italic">
+                      * These players will cycle through the placeholder slots in the order shown above.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
             )}
           </TabsContent>
 

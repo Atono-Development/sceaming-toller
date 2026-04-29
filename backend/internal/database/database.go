@@ -36,6 +36,7 @@ func InitDB() {
 		&models.Game{},
 		&models.Attendance{},
 		&models.BattingOrder{},
+		&models.BattingOrderPool{},
 		&models.FieldingLineup{},
 		&models.InningScore{},
 		&models.Invitation{},
@@ -57,6 +58,9 @@ func InitDB() {
 
 	// Migrate game date to DATE type
 	migrateGameDateToDateType(DB)
+
+	// Make batting_orders.team_member_id nullable
+	migrateBattingOrderNullableTeamMember(DB)
 }
 
 func migrateRoles(db *gorm.DB) {
@@ -154,5 +158,15 @@ func migrateGameDateToDateType(db *gorm.DB) {
 		log.Printf("Warning: Failed to migrate game date column: %v", err)
 	} else {
 		log.Println("Successfully migrated game date column to DATE type")
+	}
+}
+func migrateBattingOrderNullableTeamMember(db *gorm.DB) {
+	log.Println("Making batting_orders.team_member_id nullable...")
+	err := db.Exec(`
+		ALTER TABLE batting_orders 
+		ALTER COLUMN team_member_id DROP NOT NULL;
+	`).Error
+	if err != nil {
+		log.Printf("Warning: Failed to make team_member_id nullable: %v", err)
 	}
 }

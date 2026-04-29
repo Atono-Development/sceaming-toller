@@ -35,9 +35,11 @@ export interface Attendance {
 export interface BattingOrder {
   id: string;
   gameId: string;
-  teamMemberId: string;
+  teamMemberId: string | null;
   battingPosition: number;
   isGenerated: boolean;
+  isPlaceholder: boolean;
+  placeholderGender: string;
   createdAt: string;
   teamMember?: {
     gender: string;
@@ -46,6 +48,25 @@ export interface BattingOrder {
       name: string;
     };
   };
+}
+
+export interface BattingOrderPool {
+  id: string;
+  gameId: string;
+  teamMemberId: string;
+  poolPosition: number;
+  createdAt: string;
+  teamMember?: {
+    gender: string;
+    user?: {
+      name: string;
+    };
+  };
+}
+
+export interface BattingOrderResponse {
+  battingOrder: BattingOrder[];
+  minorityPool: BattingOrderPool[];
 }
 
 export interface FieldingLineup {
@@ -117,14 +138,14 @@ export const initializeGameAttendance = async (
 };
 
 export const getBattingOrder = async (teamId: string, gameId: string) => {
-  const response = await api.get<BattingOrder[]>(
+  const response = await api.get<BattingOrderResponse>(
     `/teams/${teamId}/games/${gameId}/batting-order`
   );
   return response.data;
 };
 
 export const generateBattingOrder = async (teamId: string, gameId: string) => {
-  const response = await api.post<BattingOrder[]>(
+  const response = await api.post<BattingOrderResponse>(
     `/teams/${teamId}/games/${gameId}/batting-order/generate`
   );
   return response.data;
@@ -205,12 +226,14 @@ export const updateFieldingLineup = async (
 export const updateBattingOrder = async (
   teamId: string,
   gameId: string,
-  battingOrder: BattingOrder[]
+  battingOrder: BattingOrder[],
+  minorityPool: BattingOrderPool[]
 ) => {
   const response = await api.put(
     `/teams/${teamId}/games/${gameId}/batting-order`,
     {
       battingOrder,
+      minorityPool,
     }
   );
   return response.data;

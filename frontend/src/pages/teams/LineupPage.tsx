@@ -45,6 +45,7 @@ import {
   updateFieldingLineup,
   updateBattingOrder,
   type BattingOrder,
+  type BattingOrderPool,
   type FieldingLineup,
   type Game,
   type Attendance,
@@ -67,7 +68,9 @@ const SortableBattingPlayer: React.FC<{
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center justify-between p-3 rounded border bg-white"
+      className={`flex items-center justify-between p-3 rounded border ${
+        player.isPlaceholder ? "bg-muted/30 border-dashed" : "bg-white"
+      }`}
     >
       <div className="flex items-center gap-3">
         {isEditing && (
@@ -82,14 +85,27 @@ const SortableBattingPlayer: React.FC<{
         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
           {player.battingPosition}
         </div>
-        <span className="font-medium">
-          {player.teamMember?.user?.name || "Unknown Player"}
-        </span>
+        {player.isPlaceholder ? (
+          <span className="font-medium italic text-muted-foreground">
+            — {player.placeholderGender === "M" ? "Male" : "Female"} slot —
+          </span>
+        ) : (
+          <span className="font-medium">
+            {player.teamMember?.user?.name || "Unknown Player"}
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-2">
         {(() => {
+          if (player.isPlaceholder) {
+            return (
+              <Badge variant="secondary">
+                {player.placeholderGender === "M" ? "Male" : "Female"} Pool
+              </Badge>
+            );
+          }
           const isPitcher = player.teamMember?.role
-            .split(",")
+            ?.split(",")
             .map((role) => role.trim().toLowerCase())
             .includes("pitcher");
 
@@ -107,6 +123,46 @@ const SortableBattingPlayer: React.FC<{
   );
 };
 
+// Sortable component for pool players
+const SortablePoolPlayer: React.FC<{
+  player: BattingOrderPool;
+  isEditing: boolean;
+}> = ({ player, isEditing }) => {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id: player.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center justify-between p-2 rounded border bg-white"
+    >
+      <div className="flex items-center gap-3">
+        {isEditing && (
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-2 -ml-2 touch-none"
+          >
+            <GripVertical className="h-4 w-4 text-gray-400" />
+          </div>
+        )}
+        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-secondary text-secondary-foreground font-bold text-xs">
+          {player.poolPosition}
+        </div>
+        <span className="text-sm font-medium">
+          {player.teamMember?.user?.name || "Unknown Player"}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 const LineupPage: React.FC = () => {
   const { teamId } = useParams<{ teamId: string }>();
   const { currentTeam } = useTeamContext();
@@ -114,9 +170,13 @@ const LineupPage: React.FC = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [battingOrder, setBattingOrder] = useState<BattingOrder[]>([]);
+  const [minorityPool, setMinorityPool] = useState<BattingOrderPool[]>([]);
   const [fieldingLineup, setFieldingLineup] = useState<FieldingLineup[]>([]);
   const [editableBattingOrder, setEditableBattingOrder] = useState<
     BattingOrder[]
+  >([]);
+  const [editableMinorityPool, setEditableMinorityPool] = useState<
+    BattingOrderPool[]
   >([]);
   const [editableFieldingLineup, setEditableFieldingLineup] = useState<
     FieldingLineup[]
@@ -212,15 +272,17 @@ const LineupPage: React.FC = () => {
 
     try {
       setLoading(true);
-      const [batting, fielding, attendanceData] = await Promise.all([
+      const [battingData, fielding, attendanceData] = await Promise.all([
         getBattingOrder(teamId!, selectedGame.id),
         getFieldingLineup(teamId!, selectedGame.id),
         getAttendance(teamId!, selectedGame.id),
       ]);
 
-      setBattingOrder(batting);
+      setBattingOrder(battingData.battingOrder);
+      setMinorityPool(battingData.minorityPool);
       setFieldingLineup(fielding);
-      setEditableBattingOrder(batting);
+      setEditableBattingOrder(battingData.battingOrder);
+      setEditableMinorityPool(battingData.minorityPool);
       setEditableFieldingLineup(fielding);
       setAttendance(attendanceData);
     } catch (error) {
@@ -328,15 +390,17 @@ const LineupPage: React.FC = () => {
       await generateWithRetry();
 
       // Load the fresh lineup data
-      const [batting, fielding, attendanceData] = await Promise.all([
+      const [battingData, fielding, attendanceData] = await Promise.all([
         getBattingOrder(teamId!, selectedGame.id),
         getFieldingLineup(teamId!, selectedGame.id),
         getAttendance(teamId!, selectedGame.id),
       ]);
 
-      setBattingOrder(batting);
+      setBattingOrder(battingData.battingOrder);
+      setMinorityPool(battingData.minorityPool);
       setFieldingLineup(fielding);
-      setEditableBattingOrder(batting);
+      setEditableBattingOrder(battingData.battingOrder);
+      setEditableMinorityPool(battingData.minorityPool);
       setEditableFieldingLineup(fielding);
       setAttendance(attendanceData);
 
@@ -392,8 +456,10 @@ const LineupPage: React.FC = () => {
       const updatedLineup = [...fielding, ...benchAssignments];
       setFieldingLineup(updatedLineup);
       setEditableFieldingLineup(updatedLineup);
-      setBattingOrder(batting);
-      setEditableBattingOrder(batting);
+      setBattingOrder(battingData.battingOrder);
+      setMinorityPool(battingData.minorityPool);
+      setEditableBattingOrder(battingData.battingOrder);
+      setEditableMinorityPool(battingData.minorityPool);
       setAttendance(attendanceData);
 
       // Save the complete lineup (including bench assignments) to backend
@@ -586,23 +652,38 @@ const LineupPage: React.FC = () => {
     const { active, over } = event;
 
     if (active.id !== over?.id) {
-      setEditableBattingOrder((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over?.id);
+      if (editableBattingOrder.some(item => item.id === active.id)) {
+        setEditableBattingOrder((items) => {
+          const oldIndex = items.findIndex((item) => item.id === active.id);
+          const newIndex = items.findIndex((item) => item.id === over?.id);
 
-        const newOrder = arrayMove(items, oldIndex, newIndex);
-        // Update batting positions
-        return newOrder.map((player, index) => ({
-          ...player,
-          battingPosition: index + 1,
-        }));
-      });
+          const newOrder = arrayMove(items, oldIndex, newIndex);
+          // Update batting positions
+          return newOrder.map((player, index) => ({
+            ...player,
+            battingPosition: index + 1,
+          }));
+        });
+      } else {
+        setEditableMinorityPool((items) => {
+          const oldIndex = items.findIndex((item) => item.id === active.id);
+          const newIndex = items.findIndex((item) => item.id === over?.id);
+
+          const newOrder = arrayMove(items, oldIndex, newIndex);
+          // Update pool positions
+          return newOrder.map((player, index) => ({
+            ...player,
+            poolPosition: index + 1,
+          }));
+        });
+      }
     }
   };
 
   const startEditingBattingOrder = () => {
     setEditingBattingOrder(true);
     setEditableBattingOrder([...battingOrder]);
+    setEditableMinorityPool([...minorityPool]);
   };
 
   const saveBattingOrder = async () => {
@@ -613,16 +694,23 @@ const LineupPage: React.FC = () => {
         teamMember: undefined, // Remove teamMember object as it's not needed in the request
       }));
 
-      await updateBattingOrder(teamId!, selectedGame!.id, cleanedBattingOrder);
+      const cleanedMinorityPool = editableMinorityPool.map((pool) => ({
+        ...pool,
+        teamMember: undefined,
+      }));
+
+      await updateBattingOrder(teamId!, selectedGame!.id, cleanedBattingOrder, cleanedMinorityPool);
 
       // Reload the fresh batting order data from backend
-      const [batting, attendanceData] = await Promise.all([
+      const [battingData, attendanceData] = await Promise.all([
         getBattingOrder(teamId!, selectedGame!.id),
         getAttendance(teamId!, selectedGame!.id),
       ]);
 
-      setBattingOrder(batting);
-      setEditableBattingOrder(batting);
+      setBattingOrder(battingData.battingOrder);
+      setMinorityPool(battingData.minorityPool);
+      setEditableBattingOrder(battingData.battingOrder);
+      setEditableMinorityPool(battingData.minorityPool);
       setAttendance(attendanceData);
       setEditingBattingOrder(false);
       toast({
@@ -640,6 +728,7 @@ const LineupPage: React.FC = () => {
 
   const cancelEditingBattingOrder = () => {
     setEditableBattingOrder([...battingOrder]);
+    setEditableMinorityPool([...minorityPool]);
     setEditingBattingOrder(false);
   };
 
@@ -859,62 +948,141 @@ const LineupPage: React.FC = () => {
                 ) : (
                   <div className="space-y-2">
                     {editingBattingOrder ? (
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleBattingDragEnd}
-                      >
-                        <SortableContext
-                          items={editableBattingOrder}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          {editableBattingOrder.map((player) => (
-                            <SortableBattingPlayer
-                              key={player.id}
-                              player={player}
-                              isEditing={editingBattingOrder}
-                            />
-                          ))}
-                        </SortableContext>
-                      </DndContext>
-                    ) : (
-                      battingOrder.map((player) => (
-                        <div
-                          key={player.id}
-                          className="flex items-center justify-between p-3 rounded border"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
-                              {player.battingPosition}
-                            </div>
-                            <span className="font-medium">
-                              {player.teamMember?.user?.name ||
-                                "Unknown Player"}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {(() => {
-                              const isPitcher = player.teamMember?.role
-                                .split(",")
-                                .map((role) => role.trim().toLowerCase())
-                                .includes("pitcher");
-
-                              return (
-                                <>
-                                  {isPitcher && (
-                                    <Badge variant="default">Pitcher</Badge>
-                                  )}
-                                  <Badge variant="outline">
-                                    {player.teamMember?.gender === "M"
-                                      ? "Male"
-                                      : "Female"}
-                                  </Badge>
-                                </>
-                              );
-                            })()}
-                          </div>
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={handleBattingDragEnd}
+                          >
+                            <SortableContext
+                              items={editableBattingOrder}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              {editableBattingOrder.map((player) => (
+                                <SortableBattingPlayer
+                                  key={player.id}
+                                  player={player}
+                                  isEditing={editingBattingOrder}
+                                />
+                              ))}
+                            </SortableContext>
+                          </DndContext>
                         </div>
-                      ))
+
+                        {editableMinorityPool.length > 0 && (
+                          <div className="space-y-3">
+                            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                              {editableMinorityPool[0].teamMember?.gender === "M" ? "Male" : "Female"} Pool Rotation
+                            </h4>
+                            <div className="bg-muted/20 p-4 rounded-lg border border-dashed">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                <DndContext
+                                  sensors={sensors}
+                                  collisionDetection={closestCenter}
+                                  onDragEnd={handleBattingDragEnd}
+                                >
+                                  <SortableContext
+                                    items={editableMinorityPool}
+                                    strategy={verticalListSortingStrategy}
+                                  >
+                                    {editableMinorityPool.map((player) => (
+                                      <SortablePoolPlayer
+                                        key={player.id}
+                                        player={player}
+                                        isEditing={editingBattingOrder}
+                                      />
+                                    ))}
+                                  </SortableContext>
+                                </DndContext>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-3 italic">
+                                * These players will cycle through the placeholder slots in the order shown above.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          {battingOrder.map((player) => (
+                            <div
+                              key={player.id}
+                              className={`flex items-center justify-between p-3 rounded border ${
+                                player.isPlaceholder ? "bg-muted/30 border-dashed" : ""
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
+                                  {player.battingPosition}
+                                </div>
+                                {player.isPlaceholder ? (
+                                  <span className="font-medium italic text-muted-foreground">
+                                    — {player.placeholderGender === "M" ? "Male" : "Female"} slot —
+                                  </span>
+                                ) : (
+                                  <span className="font-medium">
+                                    {player.teamMember?.user?.name || "Unknown Player"}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {(() => {
+                                  if (player.isPlaceholder) {
+                                    return (
+                                      <Badge variant="secondary">
+                                        {player.placeholderGender === "M" ? "Male" : "Female"} Pool
+                                      </Badge>
+                                    );
+                                  }
+                                  const isPitcher = player.teamMember?.role
+                                    ?.split(",")
+                                    .map((role) => role.trim().toLowerCase())
+                                    .includes("pitcher");
+
+                                  return (
+                                    <>
+                                      {isPitcher && <Badge variant="default">Pitcher</Badge>}
+                                      <Badge variant="outline">
+                                        {player.teamMember?.gender === "M" ? "Male" : "Female"}
+                                      </Badge>
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {minorityPool.length > 0 && (
+                          <div className="space-y-3">
+                            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                              {minorityPool[0].teamMember?.gender === "M" ? "Male" : "Female"} Pool Rotation
+                            </h4>
+                            <div className="bg-muted/20 p-4 rounded-lg border border-dashed">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                {minorityPool.map((player) => (
+                                  <div
+                                    key={player.id}
+                                    className="flex items-center gap-3 p-2 rounded border bg-white"
+                                  >
+                                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-secondary text-secondary-foreground font-bold text-xs">
+                                      {player.poolPosition}
+                                    </div>
+                                    <span className="text-sm font-medium">
+                                      {player.teamMember?.user?.name || "Unknown Player"}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-3 italic">
+                                * These players will cycle through the placeholder slots in the order shown above.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
@@ -1202,6 +1370,7 @@ const LineupPage: React.FC = () => {
               game={selectedGame}
               positionsByInning={getPositionsByInning()}
               battingOrder={battingOrder}
+              minorityPool={minorityPool}
             />
           </div>
         </div>

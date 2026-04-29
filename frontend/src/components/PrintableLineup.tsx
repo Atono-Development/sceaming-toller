@@ -13,37 +13,41 @@ interface PrintableLineupProps {
   game: Game | undefined;
   positionsByInning: Record<number, Record<string, string>>;
   battingOrder: BattingOrder[];
+  minorityPool?: BattingOrderPool[];
 }
 
 const PrintableLineup: React.FC<PrintableLineupProps> = ({
   game,
   positionsByInning,
   battingOrder,
+  minorityPool = [],
 }) => {
   if (!game) return null;
 
   // Use 7 innings instead of 9 for softball
   const totalInnings = 7;
 
-  // Convert batting order to Player format
-  const players: Player[] = battingOrder.map((player) => ({
-    id: player.teamMemberId,
-    name: player.teamMember?.user?.name || "Unknown Player",
-    gender: player.teamMember?.gender === "M" ? "Male" : "Female",
-    isPitcher:
-      player.teamMember?.role
-        .split(",")
-        .map((role) => role.trim().toLowerCase())
-        .includes("pitcher") || false,
-  }));
+  // Filter out placeholders for the fielding section players list
+  const players: Player[] = battingOrder
+    .filter((p) => !p.isPlaceholder)
+    .map((player) => ({
+      id: player.teamMemberId,
+      name: player.teamMember?.user?.name || "Unknown Player",
+      gender: player.teamMember?.gender === "M" ? "Male" : "Female",
+      isPitcher:
+        player.teamMember?.role
+          ?.split(",")
+          .map((role) => role.trim().toLowerCase())
+          .includes("pitcher") || false,
+    }));
 
   return (
     <div className="p-4 bg-white print:p-2 max-w-[8.5in] mx-auto">
       <div className="text-center mb-3 print:mb-2">
-        <h1 className="text-2xl font-bold text-team-orange print:text-xl">
+        <h1 className="text-xl font-bold text-team-orange print:text-xl">
           Screaming Orange Tollers
         </h1>
-        <h2 className="text-lg font-semibold print:text-base">
+        <h2 className="text-md font-semibold print:text-base">
           vs. {game.opposingTeam}
         </h2>
         <p className="text-sm text-gray-600">
@@ -73,17 +77,28 @@ const PrintableLineup: React.FC<PrintableLineupProps> = ({
               </tr>
             </thead>
             <tbody>
-              {players.map((player, index) => (
+              {battingOrder.map((player, index) => (
                 <tr key={player.id}>
                   <td className="border p-1 font-medium text-center">
                     {index + 1}
                   </td>
-                  <td className="border p-1">{player.name}</td>
-                  <td className="border p-1 text-center">
-                    {player.gender === "Male" ? "M" : "F"}
+                  <td className={`border p-1 ${player.isPlaceholder ? "italic text-gray-500" : ""}`}>
+                    {player.isPlaceholder 
+                      ? `— ${player.placeholderGender === "M" ? "Male" : "Female"} Pool Slot —`
+                      : player.teamMember?.user?.name || "Unknown Player"
+                    }
                   </td>
                   <td className="border p-1 text-center">
-                    {player.isPitcher ? "✓" : ""}
+                    {player.isPlaceholder 
+                      ? (player.placeholderGender === "M" ? "M" : "F")
+                      : (player.teamMember?.gender === "M" ? "M" : "F")
+                    }
+                  </td>
+                  <td className="border p-1 text-center">
+                    {!player.isPlaceholder && player.teamMember?.role
+                      ?.split(",")
+                      .map((role) => role.trim().toLowerCase())
+                      .includes("pitcher") ? "✓" : ""}
                   </td>
                   <td className="border p-1 text-center"></td>
                   <td className="border p-1 text-center"></td>
@@ -96,6 +111,21 @@ const PrintableLineup: React.FC<PrintableLineupProps> = ({
             </tbody>
           </table>
         </div>
+
+        {minorityPool.length > 0 && (
+          <div className="mt-2 p-2 border rounded bg-gray-50 print:mt-1 print:p-1">
+            <h4 className="text-xs font-bold text-team-blue-dark mb-1">
+              {minorityPool[0].teamMember?.gender === "M" ? "Male" : "Female"} Pool Rotation (Cycles through slots)
+            </h4>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px]">
+              {minorityPool.map((p, i) => (
+                <span key={p.id}>
+                  <span className="font-bold">{i + 1}.</span> {p.teamMember?.user?.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Fielding Positions Section */}

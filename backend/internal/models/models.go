@@ -14,8 +14,9 @@ type User struct {
 	Email        string    `gorm:"uniqueIndex" json:"email"`
 	IsSuperAdmin bool      `gorm:"default:false" json:"isSuperAdmin"`
 	OptOutReminders bool   `gorm:"default:false" json:"optOutReminders"`
-	CreatedAt    time.Time `json:"createdAt"`
-	UpdatedAt    time.Time `json:"updatedAt"`
+	WhapiToken      string    `json:"whapiToken,omitempty"` // Encrypted
+	CreatedAt       time.Time `json:"createdAt"`
+	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
@@ -26,17 +27,19 @@ func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
 }
 
 type Team struct {
-	ID          uuid.UUID   `gorm:"type:uuid;primaryKey" json:"id"`
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	LogoURL     string      `json:"logoUrl"`
-	League      string      `json:"league"`
-	Season      string      `json:"season"`
-	Status      string      `gorm:"default:'pending'" json:"status"` // "pending", "active", "rejected"
-	IsActive    bool        `gorm:"default:true" json:"isActive"`
-	CreatedAt   time.Time   `json:"createdAt"`
-	UpdatedAt   time.Time   `json:"updatedAt"`
-	Membership  *TeamMember `gorm:"-" json:"membership,omitempty"`
+	ID               uuid.UUID   `gorm:"type:uuid;primaryKey" json:"id"`
+	Name             string      `json:"name"`
+	Description      string      `json:"description"`
+	LogoURL          string      `json:"logoUrl"`
+	League           string      `json:"league"`
+	Season           string      `json:"season"`
+	Status           string      `gorm:"default:'pending'" json:"status"` // "pending", "active", "rejected"
+	IsActive         bool        `gorm:"default:true" json:"isActive"`
+	WhatsAppGroupID  string      `gorm:"default:''" json:"whatsAppGroupId"` // Whapi group chat ID, e.g. "120363xxx@g.us"
+	WhapiTokenSourceUserID *uuid.UUID `gorm:"type:uuid" json:"whapiTokenSourceUserId,omitempty"`
+	CreatedAt        time.Time   `json:"createdAt"`
+	UpdatedAt        time.Time   `json:"updatedAt"`
+	Membership       *TeamMember `gorm:"-" json:"membership,omitempty"`
 }
 
 func (t *Team) BeforeCreate(tx *gorm.DB) (err error) {
@@ -88,20 +91,21 @@ func (tmp *TeamMemberPreference) BeforeCreate(tx *gorm.DB) (err error) {
 }
 
 type Game struct {
-	ID            uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	TeamID        uuid.UUID `gorm:"type:uuid;index" json:"teamId"`
-	Date          time.Time `gorm:"type:date;index" json:"date"`
-	Time          string    `json:"time"`
-	Location      string    `json:"location"`
-	OpposingTeam  string    `json:"opposingTeam"`
-	IsHome        bool      `gorm:"default:true" json:"isHome"`
-	FinalScore    *int      `json:"finalScore,omitempty"`
-	OpponentScore *int      `json:"opponentScore,omitempty"`
-	Status        string    `gorm:"default:'scheduled'" json:"status"` // "scheduled", "in_progress", "completed", "cancelled"
-	CreatedAt     time.Time `json:"createdAt"`
-	UpdatedAt     time.Time `json:"updatedAt"`
+	ID                       uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
+	TeamID                   uuid.UUID  `gorm:"type:uuid;index" json:"teamId"`
+	Date                     time.Time  `gorm:"type:date;index" json:"date"`
+	Time                     string     `json:"time"`
+	Location                 string     `json:"location"`
+	OpposingTeam             string     `json:"opposingTeam"`
+	IsHome                   bool       `gorm:"default:true" json:"isHome"`
+	FinalScore               *int       `json:"finalScore,omitempty"`
+	OpponentScore            *int       `json:"opponentScore,omitempty"`
+	Status                   string     `gorm:"default:'scheduled'" json:"status"` // "scheduled", "in_progress", "completed", "cancelled"
+	WhatsAppReminderSentAt   *time.Time `json:"whatsAppReminderSentAt,omitempty"` // Set when group WA reminder is sent
+	CreatedAt                time.Time  `json:"createdAt"`
+	UpdatedAt                time.Time  `json:"updatedAt"`
 
-	Team Team `gorm:"foreignKey:TeamID" json:"team,omitempty"`
+	Team         Team          `gorm:"foreignKey:TeamID" json:"team,omitempty"`
 	InningScores []InningScore `gorm:"foreignKey:GameID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"inningScores,omitempty"`
 }
 
@@ -132,12 +136,16 @@ func (a *Attendance) BeforeCreate(tx *gorm.DB) (err error) {
 }
 
 type BattingOrder struct {
-	ID              uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	GameID          uuid.UUID `gorm:"type:uuid;index" json:"gameId"`
-	TeamMemberID    uuid.UUID `gorm:"type:uuid" json:"teamMemberId"`
-	BattingPosition int       `json:"battingPosition"`
-	IsGenerated     bool      `json:"isGenerated"`
-	CreatedAt       time.Time `json:"createdAt"`
+	ID                uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	GameID            uuid.UUID `gorm:"type:uuid;index" json:"gameId"`
+	TeamMemberID      *uuid.UUID `gorm:"type:uuid" json:"teamMemberId"`
+	BattingPosition   int       `json:"battingPosition"`
+	IsGenerated       bool      `json:"isGenerated"`
+	// IsPlaceholder marks a slot reserved for the minority gender pool.
+	// When true, TeamMemberID is nil and PlaceholderGender indicates which gender.
+	IsPlaceholder     bool      `gorm:"default:false" json:"isPlaceholder"`
+	PlaceholderGender string    `gorm:"default:''" json:"placeholderGender"`
+	CreatedAt         time.Time `json:"createdAt"`
 
 	Game       Game       `gorm:"foreignKey:GameID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"game,omitempty"`
 	TeamMember TeamMember `gorm:"foreignKey:TeamMemberID" json:"teamMember,omitempty"`
@@ -146,6 +154,26 @@ type BattingOrder struct {
 func (bo *BattingOrder) BeforeCreate(tx *gorm.DB) (err error) {
 	if bo.ID == uuid.Nil {
 		bo.ID = uuid.New()
+	}
+	return
+}
+
+// BattingOrderPool stores the ordered list of minority-gender players that
+// cycle through the placeholder slots in the batting order.
+type BattingOrderPool struct {
+	ID           uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
+	GameID       uuid.UUID  `gorm:"type:uuid;index" json:"gameId"`
+	TeamMemberID uuid.UUID  `gorm:"type:uuid" json:"teamMemberId"`
+	PoolPosition int        `json:"poolPosition"` // 1-based order within the pool
+	CreatedAt    time.Time  `json:"createdAt"`
+
+	Game       Game       `gorm:"foreignKey:GameID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"game,omitempty"`
+	TeamMember TeamMember `gorm:"foreignKey:TeamMemberID" json:"teamMember,omitempty"`
+}
+
+func (bop *BattingOrderPool) BeforeCreate(tx *gorm.DB) (err error) {
+	if bop.ID == uuid.Nil {
+		bop.ID = uuid.New()
 	}
 	return
 }

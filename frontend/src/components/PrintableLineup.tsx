@@ -27,19 +27,38 @@ const PrintableLineup: React.FC<PrintableLineupProps> = ({
   // Use 7 innings instead of 9 for softball
   const totalInnings = 7;
 
-  // Filter out placeholders for the fielding section players list
-  const players: Player[] = battingOrder
-    .filter((p) => !p.isPlaceholder)
-    .map((player) => ({
+  // Build the players list for the fielding section.
+  // When a gender pool is in use (offset ≥ 2), pool players only appear in
+  // `minorityPool` — not in `battingOrder` — so we must include them here too.
+  const seenIds = new Set<string>();
+  const players: Player[] = [
+    ...battingOrder
+      .filter((p) => !p.isPlaceholder)
+      .map((player) => ({
+        id: player.teamMemberId || "",
+        name: player.teamMember?.user?.name || "Unknown Player",
+        gender: (player.teamMember?.gender === "M" ? "Male" : "Female") as "Male" | "Female",
+        isPitcher:
+          player.teamMember?.role
+            ?.split(",")
+            .map((role) => role.trim().toLowerCase())
+            .includes("pitcher") || false,
+      })),
+    ...minorityPool.map((player) => ({
       id: player.teamMemberId || "",
       name: player.teamMember?.user?.name || "Unknown Player",
-      gender: player.teamMember?.gender === "M" ? "Male" : "Female",
+      gender: (player.teamMember?.gender === "M" ? "Male" : "Female") as "Male" | "Female",
       isPitcher:
         player.teamMember?.role
           ?.split(",")
           .map((role) => role.trim().toLowerCase())
           .includes("pitcher") || false,
-    }));
+    })),
+  ].filter((p) => {
+    if (!p.id || seenIds.has(p.id)) return false;
+    seenIds.add(p.id);
+    return true;
+  });
 
   return (
     <div className="p-4 bg-white print:p-2 max-w-[8.5in] mx-auto">

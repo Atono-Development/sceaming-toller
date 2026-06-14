@@ -221,7 +221,7 @@ func GetBattingOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var minorityPool []models.BattingOrderPool
-	if result := database.DB.Preload("TeamMember.User").Where("game_id = ?", gameID).Order("pool_position").Find(&minorityPool); result.Error != nil {
+	if result := database.DB.Preload("TeamMember").Preload("TeamMember.User").Where("game_id = ?", gameID).Order("pool_position").Find(&minorityPool); result.Error != nil {
 		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
 		return
 	}

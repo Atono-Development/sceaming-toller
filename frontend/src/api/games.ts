@@ -58,6 +58,7 @@ export interface BattingOrderPool {
   createdAt: string;
   teamMember?: {
     gender: string;
+    role?: string;
     user?: {
       name: string;
     };

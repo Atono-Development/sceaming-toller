@@ -3,6 +3,7 @@ version: "3.8"
 services:
   backend:
     build: ./backend
+    restart: unless-stopped
     ports:
       - "127.0.0.1:8080:8080"
     env_file:
@@ -23,6 +24,7 @@ services:
         - VITE_AUTH0_DOMAIN=${AUTH0_DOMAIN}
         - VITE_AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
         - VITE_API_URL=${VITE_API_URL:-/api}
+    restart: unless-stopped
     ports:
       - "127.0.0.1:5173:80"
     env_file:
@@ -34,6 +36,7 @@ services:
 
   db:
     image: postgres:15-alpine
+    restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
